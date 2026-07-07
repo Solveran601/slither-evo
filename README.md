@@ -25,15 +25,9 @@
 
 ---
 
-https://github.com/user-attachments/assets/2bc2e3ed-4e50-4d77-ae85-ab6b7a80c9b5
-
-<!--
-
-## Demo
-
-![demo](docs/demo.gif)
-
--->
+<p align="center">
+  <img src="docs/demo.svg" width="100%" alt="Slither Evo gameplay">
+</p>
 
 ## Features
 
@@ -150,16 +144,7 @@ slither-evo/
     └── logo.svg
 ```
 
-## Recording a Demo
 
-1. Install [OBS Studio](https://obsproject.com/)
-2. Start the server: `python server.py`
-3. Open `http://127.0.0.1:8765` in your browser
-4. Capture the browser window with OBS
-5. Export as GIF or MP4
-6. Convert to GIF with [ffmpeg](https://ffmpeg.org/):  
-   `ffmpeg -i demo.mp4 -vf "fps=10,scale=800:-1:flags=lanczos" -c:v gif demo.gif`
-7. Place the GIF in `docs/demo.gif` and uncomment the demo section in README
 
 ## License
 
