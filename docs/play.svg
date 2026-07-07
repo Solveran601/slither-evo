@@ -1,0 +1,195 @@
+<svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" style="cursor:pointer" onclick="window.open('https://solveran601.github.io/slither-evo/','_blank')">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0d0d20"/><stop offset="100%" stop-color="#050510"/>
+    </radialGradient>
+    <radialGradient id="eye" cx="40%" cy="40%" r="50%"><stop offset="0%" stop-color="#eee"/><stop offset="100%" stop-color="#fff"/></radialGradient>
+    <filter id="g"><feGaussianBlur stdDeviation="2"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1000" height="1000" fill="url(#bg)"/>
+
+  <!-- Grid -->
+  <line x1="100" y1="0" x2="100" y2="1000" stroke="#111125" stroke-width="0.5"/>
+  <line x1="200" y1="0" x2="200" y2="1000" stroke="#111125" stroke-width="0.5"/>
+  <line x1="300" y1="0" x2="300" y2="1000" stroke="#111125" stroke-width="0.5"/>
+  <line x1="400" y1="0" x2="400" y2="1000" stroke="#111125" stroke-width="0.5"/>
+  <line x1="500" y1="0" x2="500" y2="1000" stroke="#111125" stroke-width="0.5"/>
+  <line x1="600" y1="0" x2="600" y2="1000" stroke="#111125" stroke-width="0.5"/>
+  <line x1="700" y1="0" x2="700" y2="1000" stroke="#111125" stroke-width="0.5"/>
+  <line x1="800" y1="0" x2="800" y2="1000" stroke="#111125" stroke-width="0.5"/>
+  <line x1="900" y1="0" x2="900" y2="1000" stroke="#111125" stroke-width="0.5"/>
+  <line x1="0" y1="100" x2="1000" y2="100" stroke="#111125" stroke-width="0.5"/>
+  <line x1="0" y1="200" x2="1000" y2="200" stroke="#111125" stroke-width="0.5"/>
+  <line x1="0" y1="300" x2="1000" y2="300" stroke="#111125" stroke-width="0.5"/>
+  <line x1="0" y1="400" x2="1000" y2="400" stroke="#111125" stroke-width="0.5"/>
+  <line x1="0" y1="500" x2="1000" y2="500" stroke="#111125" stroke-width="0.5"/>
+  <line x1="0" y1="600" x2="1000" y2="600" stroke="#111125" stroke-width="0.5"/>
+  <line x1="0" y1="700" x2="1000" y2="700" stroke="#111125" stroke-width="0.5"/>
+  <line x1="0" y1="800" x2="1000" y2="800" stroke="#111125" stroke-width="0.5"/>
+  <line x1="0" y1="900" x2="1000" y2="900" stroke="#111125" stroke-width="0.5"/>
+
+  <!-- Border -->
+  <rect x="1" y="1" width="998" height="998" fill="none" stroke="#2a2a4a" stroke-width="2"/>
+
+  <!-- Zones -->
+  <circle cx="250" cy="250" r="160" fill="#ff4455" opacity="0.06"/>
+  <circle cx="250" cy="250" r="160" fill="none" stroke="#ff4455" stroke-width="2" opacity="0.2"/>
+  <text x="250" y="245" fill="#ff4455" font-family="monospace" font-size="10" text-anchor="middle" opacity="0.5">ALPHA</text>
+  <circle cx="750" cy="750" r="160" fill="#44ee55" opacity="0.06"/>
+  <circle cx="750" cy="750" r="160" fill="none" stroke="#44ee55" stroke-width="2" opacity="0.2"/>
+  <text x="750" y="745" fill="#44ee55" font-family="monospace" font-size="10" text-anchor="middle" opacity="0.5">STORM</text>
+
+  <!-- Food -->
+  <circle cx="150" cy="600" r="3.5" fill="#ffd700" opacity="0.7"/>
+  <circle cx="400" cy="200" r="3" fill="#ff6666" opacity="0.7"/>
+  <circle cx="600" cy="300" r="3.5" fill="#44aaff" opacity="0.7"/>
+  <circle cx="300" cy="700" r="3" fill="#ff69b4" opacity="0.6"/>
+  <circle cx="800" cy="200" r="2.5" fill="#ffcc00" opacity="0.7"/>
+  <rect x="695" y="397" width="7" height="7" fill="#44ffaa" opacity="0.6"/>
+  <rect x="447" y="547" width="6" height="6" fill="#ff44cc" opacity="0.6"/>
+  <circle cx="850" cy="500" r="3" fill="#ffaa44" opacity="0.7"/>
+  <polygon points="100,300 106,306 103,312 97,306" fill="#ff4488" opacity="0.6"/>
+  <polygon points="600,800 606,806 603,812 597,806" fill="#44ffcc" opacity="0.6"/>
+
+  <!-- ════════════════════════════════════════ -->
+  <!-- WORM 1 — RED, moving in a loop -->
+  <!-- ════════════════════════════════════════ -->
+  <g>
+    <animateTransform attributeName="transform" type="translate" 
+      values="300,400; 320,380; 340,360; 350,340; 340,320; 320,310; 300,320; 280,340; 270,360; 280,380; 300,400"
+      dur="8s" repeatCount="indefinite"/>
+    <circle cx="280" cy="380" r="5" fill="#ff4455" opacity="0.6"/>
+    <circle cx="290" cy="390" r="5.5" fill="#ff4455" opacity="0.7"/>
+    <circle cx="300" cy="400" r="9" fill="#ff6677"/>
+    <circle cx="300" cy="400" r="9" fill="url(#eye)" opacity="0.2"/>
+    <circle cx="303" cy="395" r="2.5" fill="#fff"/><circle cx="303" cy="395" r="1.1" fill="#111"/>
+    <circle cx="297" cy="395" r="2.5" fill="#fff"/><circle cx="297" cy="395" r="1.1" fill="#111"/>
+  </g>
+
+  <!-- WORM 2 — RED -->
+  <g>
+    <animateTransform attributeName="transform" type="translate"
+      values="200,200; 220,180; 240,190; 250,210; 240,230; 220,240; 200,230; 190,210; 200,200"
+      dur="7s" repeatCount="indefinite"/>
+    <circle cx="180" cy="190" r="4" fill="#ff4455" opacity="0.5"/>
+    <circle cx="190" cy="195" r="4.5" fill="#ff4455" opacity="0.6"/>
+    <circle cx="200" cy="200" r="8" fill="#ff6677"/>
+    <circle cx="200" cy="200" r="8" fill="url(#eye)" opacity="0.2"/>
+    <circle cx="203" cy="196" r="2.2" fill="#fff"/><circle cx="203" cy="196" r="1" fill="#111"/>
+    <circle cx="197" cy="196" r="2.2" fill="#fff"/><circle cx="197" cy="196" r="1" fill="#111"/>
+  </g>
+
+  <!-- WORM 3 — RED, big (leader) -->
+  <g>
+    <animateTransform attributeName="transform" type="translate"
+      values="280,280; 300,260; 330,250; 350,270; 360,300; 350,330; 330,350; 300,360; 280,340; 270,310; 280,280"
+      dur="10s" repeatCount="indefinite"/>
+    <circle cx="250" cy="260" r="5" fill="#ff4455" opacity="0.5"/>
+    <circle cx="260" cy="268" r="5.5" fill="#ff4455" opacity="0.6"/>
+    <circle cx="270" cy="274" r="6" fill="#ff4455" opacity="0.7"/>
+    <circle cx="280" cy="280" r="10" fill="#ff6677" filter="url(#g)"/>
+    <circle cx="280" cy="280" r="10" fill="url(#eye)" opacity="0.2"/>
+    <circle cx="284" cy="274" r="3" fill="#fff"/><circle cx="284" cy="274" r="1.3" fill="#111"/>
+    <circle cx="276" cy="274" r="3" fill="#fff"/><circle cx="276" cy="274" r="1.3" fill="#111"/>
+  </g>
+
+  <!-- WORM 4 — RED -->
+  <g>
+    <animateTransform attributeName="transform" type="translate"
+      values="350,450; 370,430; 400,420; 420,440; 430,470; 420,500; 400,520; 370,510; 350,490; 340,470; 350,450"
+      dur="9s" repeatCount="indefinite"/>
+    <circle cx="330" cy="440" r="4" fill="#ff4455" opacity="0.5"/>
+    <circle cx="340" cy="445" r="4.5" fill="#ff4455" opacity="0.6"/>
+    <circle cx="350" cy="450" r="7.5" fill="#ff6677"/>
+    <circle cx="350" cy="450" r="7.5" fill="url(#eye)" opacity="0.2"/>
+    <circle cx="353" cy="446" r="2" fill="#fff"/><circle cx="353" cy="446" r="0.9" fill="#111"/>
+    <circle cx="347" cy="446" r="2" fill="#fff"/><circle cx="347" cy="446" r="0.9" fill="#111"/>
+  </g>
+
+  <!-- WORM 5 — RED -->
+  <g>
+    <animateTransform attributeName="transform" type="translate"
+      values="150,350; 170,330; 190,340; 200,360; 190,380; 170,390; 150,370; 145,350; 150,350"
+      dur="6s" repeatCount="indefinite"/>
+    <circle cx="135" cy="342" r="3.5" fill="#ff4455" opacity="0.5"/>
+    <circle cx="143" cy="346" r="4" fill="#ff4455" opacity="0.6"/>
+    <circle cx="150" cy="350" r="7" fill="#ff6677"/>
+    <circle cx="150" cy="350" r="7" fill="url(#eye)" opacity="0.2"/>
+    <circle cx="153" cy="346" r="2" fill="#fff"/><circle cx="153" cy="346" r="0.9" fill="#111"/>
+    <circle cx="147" cy="346" r="2" fill="#fff"/><circle cx="147" cy="346" r="0.9" fill="#111"/>
+  </g>
+
+  <!-- ════════════════════════════════════════ -->
+  <!-- WORM 6 — GREEN -->
+  <!-- ════════════════════════════════════════ -->
+  <g>
+    <animateTransform attributeName="transform" type="translate"
+      values="700,700; 720,680; 740,690; 750,710; 740,730; 720,740; 700,730; 690,710; 700,700"
+      dur="8s" repeatCount="indefinite"/>
+    <circle cx="680" cy="690" r="4" fill="#44ee55" opacity="0.5"/>
+    <circle cx="690" cy="695" r="4.5" fill="#44ee55" opacity="0.6"/>
+    <circle cx="700" cy="700" r="8" fill="#66ee77"/>
+    <circle cx="700" cy="700" r="8" fill="url(#eye)" opacity="0.2"/>
+    <circle cx="703" cy="696" r="2.2" fill="#fff"/><circle cx="703" cy="696" r="1" fill="#111"/>
+    <circle cx="697" cy="696" r="2.2" fill="#fff"/><circle cx="697" cy="696" r="1" fill="#111"/>
+  </g>
+
+  <!-- WORM 7 — GREEN, big -->
+  <g>
+    <animateTransform attributeName="transform" type="translate"
+      values="780,620; 800,600; 830,590; 850,610; 860,640; 850,670; 830,690; 800,700; 780,680; 770,650; 780,620"
+      dur="10s" repeatCount="indefinite"/>
+    <circle cx="750" cy="600" r="5" fill="#44ee55" opacity="0.5"/>
+    <circle cx="760" cy="608" r="5.5" fill="#44ee55" opacity="0.6"/>
+    <circle cx="770" cy="614" r="6" fill="#44ee55" opacity="0.7"/>
+    <circle cx="780" cy="620" r="10" fill="#66ee77" filter="url(#g)"/>
+    <circle cx="780" cy="620" r="10" fill="url(#eye)" opacity="0.2"/>
+    <circle cx="784" cy="614" r="3" fill="#fff"/><circle cx="784" cy="614" r="1.3" fill="#111"/>
+    <circle cx="776" cy="614" r="3" fill="#fff"/><circle cx="776" cy="614" r="1.3" fill="#111"/>
+  </g>
+
+  <!-- WORM 8 — GREEN -->
+  <g>
+    <animateTransform attributeName="transform" type="translate"
+      values="650,550; 670,530; 700,520; 720,540; 730,570; 720,600; 700,620; 670,610; 650,590; 640,570; 650,550"
+      dur="9s" repeatCount="indefinite"/>
+    <circle cx="630" cy="540" r="4" fill="#44ee55" opacity="0.5"/>
+    <circle cx="640" cy="545" r="4.5" fill="#44ee55" opacity="0.6"/>
+    <circle cx="650" cy="550" r="7.5" fill="#66ee77"/>
+    <circle cx="650" cy="550" r="7.5" fill="url(#eye)" opacity="0.2"/>
+    <circle cx="653" cy="546" r="2" fill="#fff"/><circle cx="653" cy="546" r="0.9" fill="#111"/>
+    <circle cx="647" cy="546" r="2" fill="#fff"/><circle cx="647" cy="546" r="0.9" fill="#111"/>
+  </g>
+
+  <!-- WORM 9 — GREEN -->
+  <g>
+    <animateTransform attributeName="transform" type="translate"
+      values="850,800; 870,780; 890,790; 900,810; 890,830; 870,840; 850,820; 845,800; 850,800"
+      dur="7s" repeatCount="indefinite"/>
+    <circle cx="835" cy="792" r="3.5" fill="#44ee55" opacity="0.5"/>
+    <circle cx="843" cy="796" r="4" fill="#44ee55" opacity="0.6"/>
+    <circle cx="850" cy="800" r="7" fill="#66ee77"/>
+    <circle cx="850" cy="800" r="7" fill="url(#eye)" opacity="0.2"/>
+    <circle cx="853" cy="796" r="2" fill="#fff"/><circle cx="853" cy="796" r="0.9" fill="#111"/>
+    <circle cx="847" cy="796" r="2" fill="#fff"/><circle cx="847" cy="796" r="0.9" fill="#111"/>
+  </g>
+
+  <!-- WORM 10 — GREEN -->
+  <g>
+    <animateTransform attributeName="transform" type="translate"
+      values="600,850; 620,830; 640,840; 650,860; 640,880; 620,890; 600,870; 595,850; 600,850"
+      dur="6s" repeatCount="indefinite"/>
+    <circle cx="585" cy="842" r="3.5" fill="#44ee55" opacity="0.5"/>
+    <circle cx="593" cy="846" r="4" fill="#44ee55" opacity="0.6"/>
+    <circle cx="600" cy="850" r="7" fill="#66ee77"/>
+    <circle cx="600" cy="850" r="7" fill="url(#eye)" opacity="0.2"/>
+    <circle cx="603" cy="846" r="2" fill="#fff"/><circle cx="603" cy="846" r="0.9" fill="#111"/>
+    <circle cx="597" cy="846" r="2" fill="#fff"/><circle cx="597" cy="846" r="0.9" fill="#111"/>
+  </g>
+
+  <!-- Hover overlay -->
+  <rect x="360" y="460" width="280" height="40" rx="6" fill="#050510" stroke="#ff003c" stroke-width="1" opacity="0.7"/>
+  <text x="500" y="485" text-anchor="middle" fill="#ff003c" font-family="monospace" font-size="11" font-weight="bold">CLICK TO PLAY</text>
+</svg>
