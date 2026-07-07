@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Slither Evo — Play</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;display:flex;justify-content:center;align-items:center;height:100vh;font-family:'Segoe UI',sans-serif;overflow:hidden;color:#fff}
+#wrap{position:relative;width:100vw;height:100vh;overflow:hidden}
+canvas{display:block;background:#0a0a15;cursor:grab}
+#lb{position:absolute;top:10px;right:10px;width:220px;background:rgba(5,5,16,.85);border:1px solid #1a1a3a;border-radius:8px;padding:10px 12px;font-size:11px;max-height:calc(100vh - 40px);overflow-y:auto;backdrop-filter:blur(6px);z-index:20}
+#lb::-webkit-scrollbar{width:3px}
+#lb::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+#lb .t{font-size:13px;color:#888;margin-bottom:6px;letter-spacing:1px}
+#lb .r{display:flex;justify-content:space-between;padding:3px 5px;border-radius:3px;margin:1px 0;cursor:pointer;transition:.1s}
+#lb .r:hover{background:rgba(255,255,255,.05)}
+#lb .r .nm{font-weight:600}
+#lb .r .ms{color:#aaa}
+#lb .r .md{color:#555;font-size:9px}
+#lb .sel{background:rgba(255,255,100,.06);border:1px solid rgba(255,255,100,.15)}
+#info{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:11px;color:#444;letter-spacing:.5px;z-index:5;pointer-events:none}
+#info span{color:#666}
+#hud{position:absolute;top:10px;left:10px;font-size:10px;color:#555;z-index:15;line-height:1.8;pointer-events:none}
+#hud div span{color:#aaa}
+#epoch-bar{position:absolute;top:76px;left:10px;font-size:9px;color:#666;z-index:14;pointer-events:none;display:flex;flex-wrap:wrap;gap:3px 6px;max-width:500px}
+#epoch-bar .eb-dot{width:7px;height:7px;border-radius:50%;display:inline-block;vertical-align:middle;margin-right:2px;flex-shrink:0}
+#epoch-bar .eb-item{display:inline-flex;align-items:center;gap:2px;white-space:nowrap;line-height:1.4}
+#epoch-bar .eb-num{color:#48f;font-family:monospace;font-size:8px}
+#gen-info{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);font-size:10px;color:#333;z-index:5;pointer-events:none}
+#controls{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);z-index:25;display:flex;gap:6px;align-items:center}
+#controls button{background:rgba(5,5,16,.8);border:1px solid #1a1a3a;color:#888;padding:4px 10px;cursor:pointer;border-radius:4px;font-size:11px;transition:.15s;font-family:monospace}
+#controls button:hover{color:#fff;background:rgba(5,5,16,.95);border-color:#333}
+#controls button.on{color:#4f8;border-color:#4f8}
+#food-legend-btn{position:absolute;bottom:36px;right:10px;z-index:25;background:rgba(5,5,16,.8);border:1px solid #1a1a3a;color:#666;width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:12px;line-height:22px;text-align:center;padding:0;transition:.2s}
+#food-legend-btn:hover{color:#aaa;border-color:#333}
+#food-legend{position:absolute;bottom:62px;right:10px;z-index:25;display:none;width:260px;max-height:300px;overflow-y:auto;background:rgba(5,5,16,.95);border:1px solid #1a1a3a;border-radius:6px;padding:6px 8px;font-size:9px;backdrop-filter:blur(6px)}
+#food-legend.open{display:block}
+#food-legend::-webkit-scrollbar{width:3px}
+#food-legend::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.fl-row{display:flex;align-items:center;gap:4px;padding:1px 0}
+.fl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
+.fl-name{flex:1;color:#aaa}
+.fl-stat{color:#555;font-family:monospace;font-size:8px}
+#mode-btn{position:absolute;bottom:96px;right:10px;z-index:25;background:rgba(5,5,16,.8);border:1px solid #1a1a3a;color:#888;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:9px;transition:.2s;font-family:monospace}
+#mode-btn:hover{color:#fff;border-color:#333}
+</style>
+</head>
+<body>
+<div id=wrap>
+<canvas id=c></canvas>
+<div id=hud>
+<div>GEN <span id=hGen>0</span></div>
+<div>ALIVE <span id=hAlive>0</span></div>
+<div>SPEED <span id=hSpeed>1.0</span>x</div>
+</div>
+<div id=epoch-bar></div>
+<div id=lb><div class=t>LEADERBOARD</div></div>
+<div id=controls>
+  <button id=btn-pause>⏸</button>
+  <button id=btn-1x class=on>1×</button>
+  <button id=btn-3x>3×</button>
+  <button id=btn-10x>10×</button>
+</div>
+<button id=food-legend-btn>?</button>
+<div id=mode-btn>🎮 <span id=mode-lbl>TEAM</span></div>
+<div id=food-legend><div class=fl-row style=color:#555;justify-content:center;padding:10px>hover ? for food types</div></div>
+<div id=info><span>●</span> Slither Evo — drag to move · scroll to zoom · click name to follow · SPACE to sprint</div>
+<div id=gen-info>bots evolve locally · each worm has unique neural network</div>
+</div>
+<script>
+// CONFIG
+let W=50000,H=50000,CELL=500,GRID=100
+let N_HIDDEN1=20,N_HIDDEN2=14,N_HIDDEN3=10,N_INPUT=26,N_OUTPUT=2,WC=1006
+let N_TEAMS=15,WPT=10,MPT=15
+let FOOD_COUNT=6500,SR=8,HR=14,SEG_DIST=14,INIT_SEG=15,SPEED=3.5,SPRINT_SPEED=7.0,SPRINT_MC=0.3,ZR=1800,ZD=0.5
+let TN=['Alpha','Shadow','Viper','Cobra','Storm','Blaze','Frost','Thorn','Venom','Ghost','Raven','Titan','Neon','Pixel','Flux']
+let TC=['#ff4455','#ff8822','#ffdd33','#44ee55','#00eebb','#44aaff','#5577ff','#bb55ff','#ff44aa','#ff6677','#99ff44','#44ffaa','#22ddff','#cc44ff','#ff88aa']
+let CN=TC.map(c=>parseInt(c.slice(1),16))
+const FTYPES=[
+  {c:'#33cc66',mass:.08,pts:1,w:20,nm:'Verdant'},{c:'#44dd77',mass:.07,pts:1,w:18,nm:'Meadow'},{c:'#229944',mass:.09,pts:1,w:17,nm:'Forest'},{c:'#66ee88',mass:.06,pts:1,w:15,nm:'Mint'},{c:'#2ecc71',mass:.10,pts:1,w:14,nm:'Emerald'},{c:'#88ff44',mass:.05,pts:1,w:20,nm:'Lime'},{c:'#55cc55',mass:.08,pts:1,w:18,nm:'Grass'},{c:'#3cb371',mass:.09,pts:1,w:16,nm:'Clover'},{c:'#58d68d',mass:.07,pts:1,w:15,nm:'Sprout'},{c:'#28b828',mass:.10,pts:1,w:14,nm:'Jade'},
+  {c:'#ffd700',mass:.28,pts:2,w:10,nm:'Golden'},{c:'#ffbf00',mass:.25,pts:2,w:9,nm:'Amber'},{c:'#e6b800',mass:.22,pts:2,w:8,nm:'Honey'},{c:'#ffc87c',mass:.20,pts:2,w:7,nm:'Topaz'},{c:'#f4c430',mass:.30,pts:2,w:6,nm:'Saffron'},{c:'#daa520',mass:.18,pts:1,w:8,nm:'Pewter'},{c:'#c0c0c0',mass:.15,pts:1,w:10,nm:'Silver'},{c:'#e8d5b7',mass:.14,pts:1,w:8,nm:'Pearl'},{c:'#b8860b',mass:.16,pts:1,w:7,nm:'Oak'},{c:'#cd853f',mass:.13,pts:1,w:6,nm:'Copper'},
+  {c:'#a855f7',mass:-.20,pts:0,w:4,nm:'Poison'},{c:'#9933ff',mass:-.25,pts:0,w:3,nm:'Toxic'},{c:'#8800cc',mass:-.15,pts:0,w:3,nm:'Venom'},{c:'#cc66ff',mass:-.10,pts:0,w:5,nm:'Bitter'},{c:'#dd88ff',mass:-.05,pts:0,w:5,nm:'Sour'},
+  {c:'#ff6666',mass:.15,pts:1,w:5,nm:'Chili'},{c:'#ff4444',mass:.12,pts:1,w:4,nm:'Spicy'},{c:'#ff8833',mass:.10,pts:1,w:5,nm:'Hot'},{c:'#88ddff',mass:.08,pts:1,w:5,nm:'Frost'},{c:'#aaddff',mass:.06,pts:1,w:5,nm:'Ice'},
+  {c:'#ff69b4',mass:0,pts:0,w:3,nm:'Growth',effect:'growth'},{c:'#ffffff',mass:.50,pts:3,w:2,nm:'Star'},{c:'#ff0066',mass:.20,pts:2,w:3,nm:'Heart'},{c:'#ff4500',mass:.25,pts:2,w:2,nm:'Flame'},{c:'#88ffff',mass:.05,pts:1,w:3,nm:'Bubble'},
+  {c:'#e0e0ff',mass:.35,pts:2,w:2,nm:'Crystal'},{c:'#ff00ff',mass:.45,pts:3,w:2,nm:'Gem'},{c:'#ff88cc',mass:.10,pts:1,w:3,nm:'Candy'},{c:'#99ff99',mass:.15,pts:1,w:3,nm:'Pixie'},{c:'#ffcc00',mass:.20,pts:2,w:2,nm:'Coin'},
+  {c:'#b9f2ff',mass:.60,pts:4,w:1,nm:'Diamond'},{c:'#ff1493',mass:.40,pts:3,w:1,nm:'RareCandy'},{c:'#9932cc',mass:.35,pts:3,w:1,nm:'Magic'},{c:'#00ff7f',mass:.30,pts:2,w:1,nm:'Lucky'},{c:'#8a2be2',mass:1.00,pts:5,w:1,nm:'Mythic'},
+  {c:'#00ffff',mass:.80,pts:4,w:1,nm:'Cosmic'},{c:'#ff6347',mass:.70,pts:4,w:1,nm:'Epic'},{c:'#7cfc00',mass:.50,pts:3,w:1,nm:'Legend'},{c:'#ff8c00',mass:.55,pts:3,w:1,nm:'Solar'},{c:'#ffb6c1',mass:.65,pts:4,w:1,nm:'Royal'},
+  {c:'#ffd700',mass:0,pts:0,w:3,nm:'Aegis',fx:'invulnerable'},{c:'#ff2244',mass:0,pts:0,w:2,nm:'Betrayal',fx:'team_kill'},{c:'#00ddff',mass:0,pts:0,w:4,nm:'Nitro',fx:'speed'},{c:'#88ff88',mass:.01,pts:1,w:3,nm:'Vitality',fx:'mass_regen'},{c:'#884400',mass:-.10,pts:-1,w:3,nm:'Mold',fx:'poison'},
+  {c:'#4488ff',mass:0,pts:0,w:2,nm:'Barrier',fx:'shield'},{c:'#ff4400',mass:0,pts:0,w:1,nm:'Fury',fx:'berserk'},{c:'#888888',mass:0,pts:0,w:2,nm:'Shade',fx:'invisible'},{c:'#66ff66',mass:.02,pts:1,w:3,nm:'Regen',fx:'mass_regen'},{c:'#ff00aa',mass:0,pts:0,w:2,nm:'Chaos',fx:'team_kill'},
+]
+const FTW=FTYPES.reduce((s,f)=>s+f.w,0)
+let foodTypeCounts=new Array(FTYPES.length).fill(0)
+const EFFECT_DUR={invulnerable:10,team_kill:8,speed:6,mass_regen:8,poison:5,shield:6,berserk:10,invisible:7}
+const EFFECT_ICON={invulnerable:'🛡️',team_kill:'⚔️',speed:'⚡',mass_regen:'💚',poison:'☠️',shield:'🔵',berserk:'🔥',invisible:'👻'}
+let gameMode='team'
+
+// CANVAS
+const cv=document.getElementById('c'),cx=cv.getContext('2d')
+let Wc=window.innerWidth,Hc=window.innerHeight
+cv.width=Wc;cv.height=Hc
+window.addEventListener('resize',()=>{Wc=window.innerWidth;Hc=window.innerHeight;cv.width=Wc;cv.height=Hc})
+
+// CAMERA
+const cam={x:W/2,y:H/2,zoom:.12,tx:W/2,ty:H/2,tzoom:.12,spectate:null}
+let drag={d:false,lx:0,ly:0}
+cv.addEventListener('mousedown',e=>{if(e.button===2){cam.tx=cam.x;cam.ty=cam.y;cam.spectate=null;cam.tzoom=.08;return};drag.d=true;drag.lx=e.clientX;drag.ly=e.clientY;cv.style.cursor='grabbing';cam.spectate=null})
+window.addEventListener('mousemove',e=>{if(!drag.d)return;cam.tx-=(e.clientX-drag.lx)/cam.tzoom;cam.ty-=(e.clientY-drag.ly)/cam.tzoom;drag.lx=e.clientX;drag.ly=e.clientY})
+window.addEventListener('mouseup',()=>{drag.d=false;cv.style.cursor='grab'})
+cv.addEventListener('wheel',e=>{e.preventDefault();const f=e.deltaY>0?.88:1.12;cam.tzoom=Math.max(.008,Math.min(2.5,cam.tzoom*f))},{passive:false})
+cv.addEventListener('contextmenu',e=>e.preventDefault())
+cv.addEventListener('touchstart',e=>{if(e.touches.length===1){drag.d=true;drag.lx=e.touches[0].clientX;drag.ly=e.touches[0].clientY}})
+window.addEventListener('touchmove',e=>{if(!drag.d||e.touches.length!==1)return;cam.tx-=(e.touches[0].clientX-drag.lx)/cam.tzoom;cam.ty-=(e.touches[0].clientY-drag.ly)/cam.tzoom;drag.lx=e.touches[0].clientX;drag.ly=e.touches[0].clientY})
+window.addEventListener('touchend',()=>{drag.d=false})
+document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();const w=worms.find(ww=>ww.uid===cam.spectate);if(w&&w.alive)w.sprinting=true}})
+document.addEventListener('keyup',e=>{if(e.code==='Space'){const w=worms.find(ww=>ww.uid===cam.spectate);if(w&&w.alive)w.sprinting=false}})
+
+// SPATIAL HASH
+const grid={cells:[],clr(){this.cells=[];for(let i=0;i<GRID*GRID;i++)this.cells[i]=[]},
+  key(x,y){const gx=Math.max(0,Math.min(GRID-1,Math.floor(x/CELL))),gy=Math.max(0,Math.min(GRID-1,Math.floor(y/CELL)));return gx+','+gy},
+  add(x,y,o){const k=this.key(x,y);if(!this.cells[k])this.cells[k]=[];this.cells[k].push(o)},
+  get(x,y,r){const res=[],mx=Math.floor((x-r)/CELL),Mx=Math.floor((x+r)/CELL),my=Math.floor((y-r)/CELL),My=Math.floor((y+r)/CELL)
+    for(let gx=mx;gx<=Mx;gx++)for(let gy=my;gy<=My;gy++){const k=gx+','+gy;if(this.cells[k])res.push(...this.cells[k])}return res}
+}
+
+// NN — 26->20->14->10->2
+function nnF(w,inp){
+  const tn=x=>x>100?1:x<-100?-1:x/(1+Math.abs(x))
+  let off=0
+  function layer(nIn,nOut){
+    const out=new Float64Array(nOut)
+    for(let j=0;j<nOut;j++){
+      let s=w[off+nIn*nOut+j]
+      for(let i=0;i<nIn;i++)s+=inp[i]*w[off+j*nIn+i]
+      out[j]=tn(s)
+    }
+    off+=nIn*nOut+nOut
+    return out
+  }
+  const h1=layer(N_INPUT,N_HIDDEN1);inp=h1
+  const h2=layer(N_HIDDEN1,N_HIDDEN2);inp=h2
+  const h3=layer(N_HIDDEN2,N_HIDDEN3);inp=h3
+  const out=layer(N_HIDDEN3,N_OUTPUT)
+  return{turn:out[0],boost:Math.max(0,Math.min(1,(out[1]+1)/2))}
+}
+function rW(){const w=new Float64Array(WC);for(let i=0;i<WC;i++)w[i]=(Math.random()-.5)*2;return w}
+
+// SPEED CONTROL
+let paused=false,speedMul=1
+document.getElementById('btn-pause').onclick=()=>{paused=!paused;document.getElementById('btn-pause').textContent=paused?'▶':'⏸'}
+document.getElementById('btn-1x').onclick=()=>{speedMul=1;document.querySelectorAll('#controls button.on').forEach(b=>b.classList.remove('on'));document.getElementById('btn-1x').classList.add('on')}
+document.getElementById('btn-3x').onclick=()=>{speedMul=3;document.querySelectorAll('#controls button.on').forEach(b=>b.classList.remove('on'));document.getElementById('btn-3x').classList.add('on')}
+document.getElementById('btn-10x').onclick=()=>{speedMul=10;document.querySelectorAll('#controls button.on').forEach(b=>b.classList.remove('on'));document.getElementById('btn-10x').classList.add('on')}
+
+// STARS
+let stars=[]
+function genStars(){
+  stars=[]
+  for(let i=0;i<500;i++)stars.push({x:Math.random()*W*2-W*.5,y:Math.random()*H*2-H*.5,s:.3+Math.random()*1.2,b:.2+Math.random()*.8,p:Math.random()*Math.PI*2})
+}
+genStars()
+
+// PARTICLES
+let particles=[]
+function spawnParticles(x,y,color,count,speed,life){
+  for(let i=0;i<count;i++){
+    const a=Math.random()*Math.PI*2,sp=speed*(.5+Math.random())
+    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,l:life||.6,ml:life||.6,sz:.5+Math.random()*2,c:color})
+  }
+}
+function updateParticles(dt){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vx*=.97;p.vy*=.97;p.l-=dt
+    if(p.l<=0)particles.splice(i,1)
+  }
+}
+function drawParticles(){
+  for(const p of particles){
+    const s=ws(p.x,p.y);if(s.x<-20||s.x>Wc+20||s.y<-20||s.y>Hc+20)continue
+    const a=Math.max(0,p.l/p.ml),sz=Math.max(.5,p.sz*a*cam.zoom*2)
+    cx.globalAlpha=a*.8;cx.fillStyle=p.c;cx.beginPath();cx.arc(s.x,s.y,sz,0,Math.PI*2);cx.fill()
+  }
+  cx.globalAlpha=1
+}
+
+// FOOD LEGEND
+document.getElementById('food-legend-btn').onclick=()=>{
+  const fl=document.getElementById('food-legend');fl.classList.toggle('open')
+  if(fl.classList.contains('open')){
+    let h=''
+    for(let i=0;i<FTYPES.length;i++){
+      const ft=FTYPES[i];h+=`<div class=fl-row><span class=fl-dot style=background:${ft.c}></span><span class=fl-name>${ft.nm}</span><span class=fl-stat>${ft.mass>0?'+':''}${ft.mass} · ${ft.pts}p</span></div>`
+    }
+    fl.innerHTML=h
+  }
+}
+
+// MODE SWITCH
+const modes=['team','ffa']
+function cycleMode(){
+  const idx=modes.indexOf(gameMode);gameMode=modes[(idx+1)%modes.length]
+  document.getElementById('mode-lbl').textContent=gameMode.toUpperCase()
+  if(gameMode==='ffa'){zones={}}else{genZones()}
+}
+document.getElementById('mode-btn').onclick=cycleMode
+
+// ZONES
+let zones={}
+function genZones(){
+  const minDist=ZR*2.5,m=ZR+500
+  zones={}
+  for(let t=0;t<N_TEAMS;t++){
+    let cx,cy,ok,att=0
+    do{cx=m+Math.random()*(W-m*2);cy=m+Math.random()*(H-m*2);ok=true
+      for(const z of Object.values(zones)){const dx=cx-z.cx,dy=cy-z.cy;if(Math.sqrt(dx*dx+dy*dy)<minDist){ok=false;break}}
+      att++}while(!ok&&att<500)
+    zones[t]={cx,cy,r:ZR}
+  }
+}
+
+// FOOD
+let foods=[],foodSpawnTick=0
+function pickFoodType(){
+  let best=0,bestDef=-Infinity
+  for(let t=0;t<FTYPES.length;t++){
+    const target=FOOD_COUNT*FTYPES[t].w/FTW
+    const def=target-foodTypeCounts[t]+Math.random()*2
+    if(def>bestDef){bestDef=def;best=t}
+  }
+  return best
+}
+function spawnFood(n){
+  const limit=n
+  for(let i=0;i<limit;i++){
+    const t=pickFoodType()
+    foods.push({x:Math.random()*W,y:Math.random()*H,r:3+Math.random()*2,t})
+    foodTypeCounts[t]++
+  }
+}
+function tickFood(){
+  foodSpawnTick++
+  if(foodSpawnTick%5===0&&foods.length<FOOD_COUNT*0.9)spawnFood(2)
+  else if(foodSpawnTick%15===0&&foods.length<FOOD_COUNT)spawnFood(1)
+  for(let i=foods.length-1;i>=0;i--){
+    const f=foods[i]
+    if(f.wallDeath&&fc-f.deathTick>600){
+      if(f.t!==undefined)foodTypeCounts[f.t]--
+      foods.splice(i,1)
+    }
+  }
+}
+function clearFood(){foods=[];foodTypeCounts=new Array(FTYPES.length).fill(0)}
+
+// WORM
+let wormIdCounter=0,teamDead=new Array(N_TEAMS).fill(0)
+let needsEvo=false,deadWormsStats=[]
+
+class Worm{
+  constructor(team,id,wg,modelIdx){
+    this.team=team;this.id=id;this.uid=wormIdCounter++;this.alive=true;this.mass=1;this.st=0;this.kills=0;this.foodEaten=0;this.distTraveled=0
+    this.wg=wg;this.modelIdx=modelIdx===undefined?Math.floor(Math.random()*MPT):modelIdx
+    this.name=`${TN[team]}-${id+1}`
+    this.c=CN[team]
+    this.x=Math.random()*W;this.y=Math.random()*H;this.angle=Math.random()*Math.PI*2
+    this.sprinting=false;this.zones={inTeam:false,inEnemy:false}
+    this.seg=[];for(let i=0;i<INIT_SEG;i++)this.seg.push({x:this.x,y:this.y})
+    this.effects={};this.lastFoodTick=0;this.hunger=0;this.killsInEffect=0
+  }
+
+  think(){
+    if(!this.alive)return
+    const h=this.seg[0],md=W
+    const foods=findFoods(h.x,h.y,3)
+    const enemies=findWorms(h.x,h.y,this,2,true)
+    const allies=findWorms(h.x,h.y,this,1,false)
+    const wd=wallDists(h.x,h.y,this.angle)
+    const nearestZ=Object.values(zones).reduce((b,z)=>{const d=Math.hypot(h.x-z.cx,h.y-z.cy);return d<b?d:b},Infinity)
+    const inp=[
+      Math.sin(this.angle-foods[0].angle),Math.cos(this.angle-foods[0].angle),Math.min(1,foods[0].dist/md),
+      Math.sin(this.angle-foods[1].angle),Math.cos(this.angle-foods[1].angle),Math.min(1,foods[1].dist/md),
+      Math.sin(this.angle-foods[2].angle),Math.cos(this.angle-foods[2].angle),Math.min(1,foods[2].dist/md),
+      Math.sin(this.angle-enemies[0].angle),Math.cos(this.angle-enemies[0].angle),Math.min(1,enemies[0].dist/md),
+      Math.sin(this.angle-enemies[1].angle),Math.cos(this.angle-enemies[1].angle),Math.min(1,enemies[1].dist/md),
+      Math.sin(this.angle-allies[0].angle),Math.cos(this.angle-allies[0].angle),Math.min(1,allies[0].dist/md),
+      SPEED/6,
+      Math.min(1,wd.f/md),Math.min(1,wd.l/md),Math.min(1,wd.r/md),
+      Math.min(1,this.mass/80),
+      Math.min(1,this.hunger/600),
+      this.zones.inEnemy?1:0,
+      Math.min(1,nearestZ/(md*.5))
+    ]
+    const out=nnF(this.wg,inp)
+    let turn=out.turn
+    if(this.effects['curse'])turn=-turn
+    this.sprinting=out.boost>.6
+    if(this.sprinting&&this.mass<2)this.sprinting=false
+    this.angle+=turn*.07
+    this.angle=((this.angle%(Math.PI*2))+Math.PI*2)%(Math.PI*2)
+  }
+
+  update(){
+    if(!this.alive)return
+    this.st+=1/60;this.hunger+=1/60
+    for(const type in this.effects){
+      this.effects[type]-=1/60
+      if(this.effects[type]<=0)delete this.effects[type]
+    }
+    if(this.effects['mass_regen'])this.mass+=.02*(1/60)
+    if(this.effects['poison']){this.mass-=.03*(1/60);if(this.mass<1)this.mass=1}
+    let spd=this.sprinting?SPRINT_SPEED:SPEED
+    if(this.effects['speed'])spd*=2
+    let nx=this.seg[0].x+Math.cos(this.angle)*spd
+    let ny=this.seg[0].y+Math.sin(this.angle)*spd
+    this.distTraveled+=Math.hypot(nx-this.seg[0].x,ny-this.seg[0].y)
+    if(nx<0||nx>=W||ny<0||ny>=H){this.die(true);return}
+    this.zones={inTeam:false,inEnemy:false}
+    if(gameMode!=='ffa'){
+      for(const[t,z]of Object.entries(zones)){
+        const dx=nx-z.cx,dy=ny-z.cy,dist=Math.sqrt(dx*dx+dy*dy)
+        if(dist<=z.r){
+          if(parseInt(t)===this.team)this.zones.inTeam=true
+          else if(!this.effects['invulnerable']){this.zones.inEnemy=true;this.mass-=ZD*2*(1/60);if(this.mass<=0){this.die();return}}
+        }
+      }
+    }
+    if(this.sprinting){this.mass-=SPRINT_MC*(1/60);if(this.mass<1)this.mass=1}
+    const n=grid.get(nx,ny,HR*2)
+    for(const s of n){
+      if(!s.w||s.w===this)continue
+      const sameTeam=s.w.team===this.team
+      if(sameTeam&&!this.effects['team_kill']&&!s.w.effects['team_kill'])continue
+      if(gameMode!=='ffa'&&sameTeam)continue
+      const dx=nx-s.x,dy=ny-s.y
+      if(dx*dx+dy*dy<(HR+SR)*(HR+SR)){
+        if(this.effects['invulnerable']){this.die();return}
+        if(this.effects['shield']){this.die();s.w.die();return}
+        this.die()
+        if(!s.w.effects['invulnerable']){s.w.mass+=this.mass*.3;s.w.kills++}
+        if(this.effects['berserk'])this.killsInEffect++
+        return
+      }
+    }
+    this.seg.unshift({x:nx,y:ny})
+    for(let i=foods.length-1;i>=0;i--){
+      const f=foods[i],dx=nx-f.x,dy=ny-f.y
+      if(dx*dx+dy*dy<HR*HR){
+        const ft=f.t!==undefined&&f.t<FTYPES.length?FTYPES[f.t]:FTYPES[0]
+        if(ft.fx&&EFFECT_DUR[ft.fx]){
+          const dur=EFFECT_DUR[ft.fx]
+          if(this.effects[ft.fx])this.effects[ft.fx]=Math.max(this.effects[ft.fx],dur)
+          else this.effects[ft.fx]=dur
+          spawnParticles(nx,ny,ft.c,8,2,.6)
+        }else{
+          if(ft.mass>0)this.foodEaten++
+          this.mass+=ft.mass
+          if(this.mass<1)this.mass=1
+          if(ft.effect==='growth'){this.mass*=2;const tl=Math.floor(INIT_SEG+Math.min(this.mass*2.5,200));while(this.seg.length<tl)this.seg.push({x:this.seg[this.seg.length-1].x,y:this.seg[this.seg.length-1].y})}
+          spawnParticles(nx,ny,ft.c,4,1,.4)
+        }
+        if(f.t!==undefined&&f.t<FTYPES.length)foodTypeCounts[f.t]--
+        this.lastFoodTick=this.st;this.hunger=0
+        foods.splice(i,1);ate=true
+      }
+    }
+    if(this.sprinting&&this.st%3===0){
+      const bx=this.seg[this.seg.length-1]||this.seg[0]
+      const dt=pickFoodType();foods.push({x:bx.x+(Math.random()-.5)*5,y:bx.y+(Math.random()-.5)*5,r:3,t:dt});foodTypeCounts[dt]++
+    }
+    const tl=Math.floor(INIT_SEG+Math.min(this.mass*2.5,200))
+    while(this.seg.length>tl)this.seg.pop()
+    while(this.seg.length<tl)this.seg.push({x:this.seg[this.seg.length-1].x,y:this.seg[this.seg.length-1].y})
+  }
+
+  die(fromWall){
+    if(this.effects['invulnerable'])return
+    deadWormsStats.push({team:this.team,id:this.id,modelId:this.modelIdx,mass:this.mass,survivalTime:this.st,kills:this.kills,foodEaten:this.foodEaten,distanceTraveled:this.distTraveled})
+    this.alive=false;teamDead[this.team]++
+    if(teamDead[this.team]>=WPT)needsEvo=true
+    spawnParticles(this.seg[0].x,this.seg[0].y,this.c,20,3,.8)
+    const dropCount=Math.min(30,Math.floor(this.mass*4))
+    for(let i=0;i<dropCount;i++){
+      const dt=pickFoodType()
+      const f={x:this.seg[0].x+(Math.random()-.5)*40,y:this.seg[0].y+(Math.random()-.5)*40,r:3+Math.random()*4,t:dt}
+      if(fromWall){f.wallDeath=true;f.deathTick=fc}
+      foods.push(f);foodTypeCounts[dt]++
+    }
+  }
+
+  reset(wg,modelIdx){
+    this.alive=true;this.mass=1;this.st=0;this.kills=0;this.foodEaten=0;this.distTraveled=0;this.sprinting=false;this.effects={};this.hunger=0;this.killsInEffect=0
+    this.wg=wg;this.modelIdx=modelIdx===undefined?Math.floor(Math.random()*MPT):modelIdx
+    this.x=Math.random()*W;this.y=Math.random()*H;this.angle=Math.random()*Math.PI*2
+    this.seg=[];for(let i=0;i<INIT_SEG;i++)this.seg.push({x:this.x,y:this.y})
+  }
+}
+
+// PERCEPTION
+function findFoods(x,y,count){
+  const items=grid.get(x,y,1200).filter(i=>i.r!==undefined)
+  const withDist=items.map(f=>{const d=Math.sqrt((x-f.x)**2+(y-f.y)**2)-f.r;return{...f,dd:Math.max(0,d)}})
+  withDist.sort((a,b)=>a.dd-b.dd)
+  const res=[]
+  for(let i=0;i<count&&i<withDist.length;i++)res.push({angle:Math.atan2(withDist[i].y-y,withDist[i].x-x),dist:withDist[i].dd})
+  while(res.length<count)res.push({angle:0,dist:W})
+  return res
+}
+function findWorms(x,y,self,count,enemies){
+  const items=grid.get(x,y,1200).filter(s=>s.w&&s.w!==self)
+  const filtered=enemies?items.filter(s=>{
+    if(gameMode==='ffa')return true
+    return s.w.team!==self.team
+  }):items.filter(s=>s.w.team===self.team)
+  const withDist=filtered.map(s=>{const d=Math.hypot(s.x-x,s.y-y);return{...s,dd:d}})
+  withDist.sort((a,b)=>a.dd-b.dd)
+  const res=[]
+  for(let i=0;i<count&&i<withDist.length;i++)res.push({angle:Math.atan2(withDist[i].y-y,withDist[i].x-x),dist:withDist[i].dd,w:withDist[i].w})
+  while(res.length<count)res.push({angle:0,dist:W,w:null})
+  return res
+}
+function wallDists(x,y,a){
+  const ca=(ad)=>{for(let i=1;i<=50;i++){const tx=x+Math.cos(ad)*i*20,ty=y+Math.sin(ad)*i*20;if(tx<0||tx>=W||ty<0||ty>=H)return i*20}return W}
+  return{f:ca(a),l:ca(a-Math.PI/3),r:ca(a+Math.PI/3)}
+}
+
+// PERSONALITY
+function getPersonality(w){
+  const s=w.st,k=w.kills,f=w.foodEaten,d=w.distTraveled,m=w.mass
+  if(!s||s<3)return{emoji:'🟢',lbl:'Normal'}
+  const rK=k/s,rF=f/s,rD=d/s
+  if(m>50)return{emoji:'🐉',lbl:'Giant'}
+  if(k>5&&m>20)return{emoji:'💀',lbl:'Killer'}
+  if(rK>0.08)return{emoji:'⚔️',lbl:'Aggressive'}
+  if(w.zones.inEnemy&&m<8)return{emoji:'🏃',lbl:'Fleeing'}
+  if(f<1&&s>15)return{emoji:'⭐',lbl:'Starving'}
+  if(rF>0.6)return{emoji:'🍽️',lbl:'Hungry'}
+  if(rD<8&&s>15)return{emoji:'🐌',lbl:'Lazy'}
+  if(k>m/5&&s>15)return{emoji:'🔪',lbl:'Vicious'}
+  if(m<3&&s>10)return{emoji:'🐣',lbl:'Tiny'}
+  return{emoji:'🟢',lbl:'Normal'}
+}
+
+// WORLD
+let worms=[],teamWg={},aliveCount=0
+let teamEpochs=new Array(N_TEAMS).fill(0)
+let teamModelPools={}
+
+function rebuildHash(){
+  grid.clr()
+  for(const w of worms){if(!w.alive)continue;for(const s of w.seg){grid.add(s.x,s.y,s);s.w=w}}
+  for(const f of foods)grid.add(f.x,f.y,f)
+}
+
+function updateAll(){
+  rebuildHash()
+  for(const w of worms){
+    if(!w.alive)continue
+    w.think()
+  }
+  for(const w of worms)w.update()
+  aliveCount=worms.filter(w=>w.alive).length
+}
+
+// RENDER
+function ws(x,y){return{x:(x-cam.x)*cam.zoom+Wc/2,y:(y-cam.y)*cam.zoom+Hc/2}}
+
+function render(){
+  cx.fillStyle='#0a0a15';cx.fillRect(0,0,Wc,Hc)
+
+  const sx=cam.x/Wc,sy=cam.y/Hc
+  for(const st of stars){
+    const px=(st.x+cam.x*.3+Wc)*.4,py=(st.y+cam.y*.3+Hc)*.4
+    if(px<0||px>Wc||py<0||py>Hc)continue
+    const twinkle=.6+.4*Math.sin(fc*.03+st.p),a=st.b*twinkle
+    cx.fillStyle=`rgba(255,255,255,${a*.3+.1})`;cx.fillRect(px,py,st.s,st.s)
+  }
+
+  const pulse=.7+.3*Math.sin(fc*.02)
+  for(const[t,z]of Object.entries(zones)){
+    const c=ws(z.cx,z.cy),r=z.r*cam.zoom
+    if(c.x<-r-100||c.x>Wc+r+100||c.y<-r-100||c.y>Hc+r+100)continue
+    cx.beginPath();cx.arc(c.x,c.y,r,0,Math.PI*2)
+    cx.fillStyle=TC[t]+'08';cx.fill()
+    cx.strokeStyle=TC[t]+Math.floor(40*pulse).toString(16).padStart(2,'0');cx.lineWidth=2.5;cx.stroke()
+    cx.strokeStyle=TC[t]+'15';cx.lineWidth=6;cx.beginPath();cx.arc(c.x,c.y,r,0,Math.PI*2);cx.stroke()
+    if(r>30){
+      cx.fillStyle='#ffffff20';cx.font='bold 10px sans-serif';cx.textAlign='center'
+      cx.fillText(TN[t],c.x,c.y-5)
+      cx.fillStyle='#ffffff10';cx.font='8px sans-serif'
+      const ep=teamEpochs[parseInt(t)]||0
+      cx.fillText('EPOCH '+ep,c.x,c.y+8)
+    }
+  }
+
+  const gs=1000
+  const minX=Math.max(0,Math.floor((cam.x-Wc/2/cam.zoom)/gs)*gs)
+  const maxX=Math.min(W,Math.ceil((cam.x+Wc/2/cam.zoom)/gs)*gs)
+  const minY=Math.max(0,Math.floor((cam.y-Hc/2/cam.zoom)/gs)*gs)
+  const maxY=Math.min(H,Math.ceil((cam.y+Hc/2/cam.zoom)/gs)*gs)
+  cx.strokeStyle='#111125';cx.lineWidth=.5
+  for(let x=minX;x<=maxX;x+=gs){const s=ws(x,minY),e=ws(x,maxY);cx.beginPath();cx.moveTo(s.x,s.y);cx.lineTo(e.x,e.y);cx.stroke()}
+  for(let y=minY;y<=maxY;y+=gs){const s=ws(minX,y),e=ws(maxX,y);cx.beginPath();cx.moveTo(s.x,s.y);cx.lineTo(e.x,e.y);cx.stroke()}
+
+  const tl=ws(0,0),br=ws(W,H)
+  cx.strokeStyle='#2a2a4a';cx.lineWidth=2;cx.strokeRect(tl.x,tl.y,br.x-tl.x,br.y-tl.y)
+
+  for(const f of foods){
+    const s=ws(f.x,f.y)
+    if(s.x<-10||s.x>Wc+10||s.y<-10||s.y>Hc+10)continue
+    const ft=f.t!==undefined&&f.t<FTYPES.length?FTYPES[f.t]:FTYPES[0]
+    const tier=ft.mass<0?2:f.t<10?0:f.t<20?1:f.t<30?2:f.t<40?3:4
+    const sz=Math.max(1,f.r*cam.zoom*(.7+Math.abs(ft.mass)*1.5))
+    cx.fillStyle=ft.c
+    const shape=f.t%4
+    if(shape===0){cx.beginPath();cx.arc(s.x,s.y,sz,0,Math.PI*2);cx.fill()}
+    else if(shape===1){cx.fillRect(s.x-sz/1.4,s.y-sz/1.4,sz*1.4,sz*1.4)}
+    else if(shape===2){cx.beginPath();cx.moveTo(s.x,s.y-sz*.9);cx.lineTo(s.x+sz*.8,s.y);cx.lineTo(s.x,s.y+sz*.9);cx.lineTo(s.x-sz*.8,s.y);cx.closePath();cx.fill()}
+    else{cx.beginPath();cx.moveTo(s.x,s.y-sz*.9);cx.lineTo(s.x+sz*.7,s.y+sz*.5);cx.lineTo(s.x-sz*.7,s.y+sz*.5);cx.closePath();cx.fill()}
+    if(tier>=4){cx.save();cx.shadowColor=ft.c;cx.shadowBlur=sz*3;cx.beginPath();cx.arc(s.x,s.y,sz,0,Math.PI*2);cx.fill();cx.restore()}
+    else if(tier>=1){cx.strokeStyle=ft.c;cx.globalAlpha=.5;cx.lineWidth=1.5;cx.beginPath();cx.arc(s.x,s.y,sz+1.5,0,Math.PI*2);cx.stroke();cx.globalAlpha=1}
+    if(ft.mass<0){cx.fillStyle='#000a';cx.font=(sz*1.1)+'px sans-serif';cx.textAlign='center';cx.textBaseline='middle';cx.fillText('✕',s.x,s.y+1)}
+    if(ft.effect==='growth'){cx.fillStyle='#fffa';cx.font=(sz*.8)+'px sans-serif';cx.textAlign='center';cx.textBaseline='middle';cx.fillText('✦',s.x,s.y)}
+  }
+
+  drawParticles()
+
+  const spectateW=cam.spectate!==null?worms.find(w=>w.uid===cam.spectate):null
+
+  for(const w of worms){
+    if(!w.alive)continue
+    const h=ws(w.seg[0].x,w.seg[0].y)
+    if(h.x<-300||h.x>Wc+300||h.y<-300||h.y>Hc+300)continue
+    const col='#'+w.c.toString(16).padStart(6,'0')
+    const cr=(w.c>>16)&255,cg=(w.c>>8)&255,cb=w.c&255
+    const dark=`rgb(${Math.floor(cr*.25)},${Math.floor(cg*.25)},${Math.floor(cb*.25)})`
+    const z=w.zones
+    const zMult=z.inEnemy?1.3:z.inTeam?1.15:1
+    for(let i=w.seg.length-1;i>=0;i--){
+      const s=ws(w.seg[i].x,w.seg[i].y),size=(SR-(i/w.seg.length)*2.5)*cam.zoom*zMult
+      const sr=Math.max(1,size)
+      const gr=cx.createRadialGradient(s.x-sr*.3,s.y-sr*.3,0,s.x,s.y,sr)
+      gr.addColorStop(0,col);gr.addColorStop(.5,col);gr.addColorStop(1,dark)
+      cx.fillStyle=gr;cx.beginPath();cx.arc(s.x,s.y,sr,0,Math.PI*2);cx.fill()
+    }
+    const hr=HR*cam.zoom*zMult
+    const hg=cx.createRadialGradient(h.x-hr*.2,h.y-hr*.2,0,h.x,h.y,hr)
+    hg.addColorStop(0,'#fff');hg.addColorStop(.15,col);hg.addColorStop(.7,col);hg.addColorStop(1,dark)
+    cx.fillStyle=hg;cx.beginPath();cx.arc(h.x,h.y,hr,0,Math.PI*2);cx.fill()
+    if(w.sprinting){cx.strokeStyle='#fff3';cx.lineWidth=2;cx.beginPath();cx.arc(h.x,h.y,hr*1.4,0,Math.PI*2);cx.stroke()}
+    const eo=hr*.38,er=Math.max(1,hr*.18)
+    const seg1=w.seg[1]||w.seg[0]
+    const ea=Math.atan2(w.seg[0].y-seg1.y,w.seg[0].x-seg1.x)
+    for(const sd of[-1,1]){
+      const ex=h.x+Math.cos(ea+sd*.55)*eo,ey=h.y+Math.sin(ea+sd*.55)*eo
+      cx.fillStyle='#fff';cx.beginPath();cx.arc(ex,ey,er,0,Math.PI*2);cx.fill()
+      cx.fillStyle='#111';cx.beginPath();cx.arc(ex+Math.cos(ea)*er*.35,ey+Math.sin(ea)*er*.35,er*.45,0,Math.PI*2);cx.fill()
+    }
+    if(spectateW&&w===spectateW){
+      cx.strokeStyle='#ffe044';cx.lineWidth=2;cx.setLineDash([4,4])
+      cx.beginPath();cx.arc(h.x,h.y,hr*2,0,Math.PI*2);cx.stroke();cx.setLineDash([])
+    }
+
+    const fxKeys=Object.keys(w.effects)
+    if(cam.zoom>0.04&&fxKeys.length>0){
+      const icons=fxKeys.map(k=>EFFECT_ICON[k]||'✨').join(' ')
+      cx.font='10px sans-serif';cx.textAlign='center';cx.textBaseline='bottom'
+      const cw=cx.measureText(icons).width+10
+      cx.fillStyle='rgba(0,0,0,0.5)';cx.fillRect(h.x-cw/2,h.y-hr-28,cw,14)
+      cx.fillText(icons,h.x,h.y-hr-17)
+    }
+    if(cam.zoom>0.04&&w.st>5){
+      const per=getPersonality(w)
+      cx.font='9px sans-serif';cx.textAlign='center';cx.textBaseline='bottom'
+      const txt=per.emoji+' '+per.lbl,cw=cx.measureText(txt).width+10
+      cx.fillStyle='rgba(0,0,0,0.55)';cx.fillRect(h.x-cw/2,h.y-hr-15,cw,14)
+      cx.fillStyle=col;cx.fillText(txt,h.x,h.y-hr-4)
+    }
+  }
+}
+
+// LEADERBOARD
+function updateLeaderboard(){
+  const sorted=[...worms].filter(w=>w.alive).sort((a,b)=>b.mass-a.mass).slice(0,20)
+  const lb=document.getElementById('lb')
+  let html='<div class=t>LEADERBOARD</div>'
+  for(let i=0;i<sorted.length;i++){
+    const w=sorted[i],c=TC[w.team]
+    const sel=cam.spectate===w.uid?' sel':''
+    html+=`<div class="r${sel}" data-uid="${w.uid}"><span class=nm style=color:${c}>${i+1}. ${w.name}</span><span class=md>[m${w.modelIdx}]</span><span class=ms>${Math.floor(w.mass)}</span><span style=color:#555;font-size:9px;margin-left:4px>${w.foodEaten}k ${w.kills}p</span></div>`
+  }
+  lb.innerHTML=html
+  lb.querySelectorAll('.r').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const uid=parseInt(el.dataset.uid)
+      cam.spectate=cam.spectate===uid?null:uid
+      const w=worms.find(ww=>ww.uid===uid)
+      if(w&&cam.spectate!==null){cam.tx=w.seg[0].x;cam.ty=w.seg[0].y}
+    })
+  })
+}
+
+// TEAMS PANEL
+function updateTeamPanel(){
+  const body=document.getElementById('tp-body')
+  let html=''
+  for(let t=0;t<N_TEAMS;t++){
+    const tw=worms.filter(w=>w.team===t)
+    const al=tw.filter(w=>w.alive).length,dd=teamDead[t]
+    const maxMass=tw.filter(w=>w.alive).reduce((s,w)=>Math.max(s,w.mass),0).toFixed(0)
+    const ep=teamEpochs[t]||0
+    html+=`<div class=tp-row>
+      <div class=tp-dot style=background:${TC[t]}></div>
+      <div class=tp-name style=color:${TC[t]}>${TN[t]}</div>
+      <div class=tp-ep>E${ep}</div>
+      <div class=tp-stat>${al}/${WPT}</div>
+      <div class=tp-stat>${maxMass}</div>
+    </div>`
+  }
+  body.innerHTML=html
+}
+function updateEpochBar(){
+  const eb=document.getElementById('epoch-bar')
+  let h=''
+  for(let t=0;t<N_TEAMS;t++){
+    const tw=worms.filter(w=>w.team===t),al=tw.filter(w=>w.alive).length
+    const dotCol=al>0?TC[t]:'#444'
+    h+=`<span class=eb-item><span class=eb-dot style=background:${dotCol}></span><span class=eb-num style=color:${al>0?'#48f':'#555'}>${teamEpochs[t]||0}</span></span>`
+  }
+  eb.innerHTML=h
+}
+
+// LOCAL EVOLUTION
+function evolveDeadTeams(){
+  for(let t=0;t<N_TEAMS;t++){
+    if(teamDead[t]>=WPT){
+      teamModelPools[t]=Array.from({length:MPT},()=>rW())
+      teamEpochs[t]=(teamEpochs[t]||0)+1
+      respawnTeam(t)
+    }
+  }
+}
+
+function respawnTeam(team){
+  teamDead[team]=0
+  const pool=teamModelPools[team]
+  for(const w of worms)if(w.team===team){
+    const wg=pool?pool[Math.floor(Math.random()*pool.length)]:rW()
+    const mi=pool?Math.floor(Math.random()*pool.length):0
+    w.reset(wg,mi)
+  }
+}
+
+function createWorms(){
+  worms=[]
+  for(let t=0;t<N_TEAMS;t++){
+    const pool=teamModelPools[t]||[teamWg[t]]
+    for(let i=0;i<WPT;i++){
+      const wg=pool[Math.floor(Math.random()*pool.length)]
+      const mi=Math.floor(Math.random()*Math.max(1,pool.length))
+      worms.push(new Worm(t,i,wg,mi))
+    }
+  }
+}
+
+// INIT
+genZones()
+for(let t=0;t<N_TEAMS;t++){teamWg[t]=rW();teamModelPools[t]=[rW()]}
+clearFood();spawnFood(Math.floor(FOOD_COUNT*0.5))
+teamDead=new Array(N_TEAMS).fill(0)
+teamEpochs=new Array(N_TEAMS).fill(0)
+wormIdCounter=0
+createWorms()
+document.getElementById('hAlive').textContent=worms.filter(w=>w.alive).length
+
+// GAME LOOP
+let fc=0
+function loop(){
+  requestAnimationFrame(loop)
+  fc++
+
+  if(!paused){
+    for(let s=0;s<speedMul;s++){
+      updateAll()
+      tickFood()
+      if(speedMul>1&&aliveCount===0)break
+    }
+    updateParticles(.05*speedMul)
+  }
+  document.getElementById('hAlive').textContent=aliveCount
+
+  if(cam.spectate!==null&&!drag.d){
+    const spec=worms.find(w=>w.uid===cam.spectate)
+    if(spec&&spec.alive){cam.tx=spec.seg[0].x;cam.ty=spec.seg[0].y}
+    else{cam.spectate=null}
+  }
+
+  const snap=.08
+  cam.x+=(cam.tx-cam.x)*snap
+  cam.y+=(cam.ty-cam.y)*snap
+  cam.zoom+=(cam.tzoom-cam.zoom)*snap
+
+  render()
+
+  if(fc%20===0){updateLeaderboard();updateTeamPanel();updateEpochBar()}
+  if(fc%60===0||needsEvo){evolveDeadTeams();needsEvo=false;deadWormsStats=[]}
+}
+loop()
+</script>
+</body>
+</html>

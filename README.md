@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="#demo">Demo</a> •
+  <a href="https://solveran601.github.io/slither-evo/">Play</a> •
   <a href="#features">Features</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#controls">Controls</a> •
@@ -26,7 +26,13 @@
 ---
 
 <p align="center">
-  <img src="docs/demo.svg" width="100%" alt="Slither Evo gameplay">
+  <a href="https://solveran601.github.io/slither-evo/">
+    <img src="https://img.shields.io/badge/▶%20PLAY%20NOW-solveran601.github.io/slither--evo-ff003c?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Play Now">
+  </a>
+</p>
+
+<p align="center">
+  <b>No server needed — runs entirely in your browser with local bots</b>
 </p>
 
 ## Features
@@ -41,13 +47,16 @@
 
 ## Quick Start
 
+**Play in browser** (no server required):
+→ [solveran601.github.io/slither-evo](https://solveran601.github.io/slither-evo/)
+
+**Run with evolution server** (full AI training):
 ```bash
 git clone https://github.com/Solveran601/slither-evo.git
 cd slither-evo
 python server.py
 ```
-
-Open [http://127.0.0.1:8765](http://127.0.0.1:8765) in your browser.
+Open [http://127.0.0.1:8765](http://127.0.0.1:8765).
 
 ## Controls
 
