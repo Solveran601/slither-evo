@@ -27,12 +27,6 @@
 
 <p align="center">
   <a href="https://solveran601.github.io/slither-evo/">
-    <img src="docs/play.svg" width="100%" alt="Slither Evo gameplay">
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://solveran601.github.io/slither-evo/">
     <img src="https://img.shields.io/badge/▶%20PLAY%20NOW-ff003c?style=for-the-badge&logo=google-chrome" alt="Play Now">
   </a>
   <br>
