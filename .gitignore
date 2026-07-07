@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Runtime artifacts
+stderr.txt
+stdout.txt
+stats_history.json
+*.log
+
+# Training artifacts
+weights/
+!weights/_hall_of_fame/
+weights/_hall_of_fame/best.json
+
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
