@@ -25,13 +25,7 @@
 
 ---
 
-<p align="center">
-  <a href="https://solveran601.github.io/slither-evo/">
-    <img src="https://img.shields.io/badge/▶%20PLAY%20NOW-ff003c?style=for-the-badge&logo=google-chrome" alt="Play Now">
-  </a>
-  <br>
-  <sub>No server needed — runs in your browser with local bots</sub>
-</p>
+
 
 ## Features
 
