@@ -1,6 +1,6 @@
 """
 Slither Evo v2 — HTTP server
-Per-team model pools, epoch tracking, team endpoints.
+Per-team model pools, epoch tracking, team endpoints, per-mode weights.
 """
 
 import json
@@ -10,12 +10,14 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 from pathlib import Path
 
+import config
 from config import *
 from evolution import EvolutionEngine
 
 PORT = 8765
 STATIC_DIR = Path(__file__).parent
 
+# Create engine with current mode
 engine = EvolutionEngine()
 
 
@@ -66,12 +68,12 @@ class Handler(BaseHTTPRequestHandler):
 
         elif path == '/config':
             self._send_json({
-                'worldSize': WORLD_SIZE,
-                'nTeams': N_TEAMS,
-                'wormsPerTeam': WORMS_PER_TEAM,
-                'modelsPerTeam': MODELS_PER_TEAM,
-                'nWorms': N_WORMS,
-                'foodCount': FOOD_COUNT,
+                'worldSize': config.WORLD_SIZE if hasattr(config,'WORLD_SIZE') else WORLD_SIZE,
+                'nTeams': config.N_TEAMS if hasattr(config,'N_TEAMS') else N_TEAMS,
+                'wormsPerTeam': config.WORMS_PER_TEAM if hasattr(config,'WORMS_PER_TEAM') else WORMS_PER_TEAM,
+                'modelsPerTeam': config.MODELS_PER_TEAM if hasattr(config,'MODELS_PER_TEAM') else MODELS_PER_TEAM,
+                'nWorms': config.N_WORMS if hasattr(config,'N_WORMS') else N_WORMS,
+                'foodCount': config.FOOD_COUNT if hasattr(config,'FOOD_COUNT') else FOOD_COUNT,
                 'baseSpeed': BASE_SPEED,
                 'sprintSpeed': SPRINT_SPEED,
                 'sprintMassCost': SPRINT_MASS_COST,
@@ -79,25 +81,39 @@ class Handler(BaseHTTPRequestHandler):
                 'headRadius': HEAD_RADIUS,
                 'segmentDist': SEG_DIST,
                 'initialSegments': INITIAL_SEGMENTS,
-                'teamNames': TEAM_NAMES,
-                'teamColors': TEAM_COLORS,
-                'zoneRadius': ZONE_RADIUS,
-                'zoneDamage': ZONE_DAMAGE,
+                'teamNames': config.TEAM_NAMES if hasattr(config,'TEAM_NAMES') else TEAM_NAMES,
+                'teamColors': config.TEAM_COLORS if hasattr(config,'TEAM_COLORS') else TEAM_COLORS,
+                'zoneRadius': config.ZONE_RADIUS if hasattr(config,'ZONE_RADIUS') else ZONE_RADIUS,
+                'zoneDamage': config.ZONE_DAMAGE if hasattr(config,'ZONE_DAMAGE') else ZONE_DAMAGE,
                 'nInput': N_INPUT,
                 'nHidden1': N_HIDDEN1,
                 'nHidden2': N_HIDDEN2,
                 'nHidden3': N_HIDDEN3,
                 'nOutput': N_OUTPUT,
                 'weightCount': WEIGHT_COUNT,
-                'gameMode': GAME_MODE,
+                'gameMode': config.GAME_MODE if hasattr(config,'GAME_MODE') else GAME_MODE,
+                'obstaclesEnabled': config.OBSTACLES_ENABLED if hasattr(config,'OBSTACLES_ENABLED') else OBSTACLES_ENABLED,
+                'obstacleMap': config.OBSTACLE_MAP if hasattr(config,'OBSTACLE_MAP') else OBSTACLE_MAP,
             })
 
         elif path == '/zones':
             self._send_json(engine.zone_manager.zones)
 
         elif path == '/weights':
-            # Backward compat: return best model per team
             self._send_json(engine.weight_manager.get_all_weights())
+
+        elif path == '/pools':
+            pools = {}
+            for t in range(N_TEAMS):
+                pool = engine.weight_manager.get_pool(t)
+                if pool:
+                    pools[str(t)] = {
+                        'models': [m.to_list() for m in pool.models],
+                        'epoch': pool.epoch,
+                        'fitness': pool.get_all_fitness(),
+                        'fitness_history': pool.epoch_fitness_log[-200:],
+                    }
+            self._send_json(pools)
 
         elif path == '/leaderboard':
             self._send_json(engine.get_leaderboard())
@@ -107,11 +123,12 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(stats)
 
         elif path == '/fitness_history':
-            import json
             hist = []
             try:
-                with open('stats_history.json', 'r') as sf:
-                    hist = json.load(sf)
+                sf_path = STATIC_DIR / 'stats_history.json'
+                if sf_path.exists():
+                    with open(sf_path, 'r') as sf:
+                        hist = json.load(sf)
             except:
                 pass
             if isinstance(hist, list):
@@ -123,7 +140,6 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(engine.stats_log[-200:])
 
         elif path == '/hof':
-            # Hall of Fame
             hof_path = STATIC_DIR / 'weights' / '_hall_of_fame' / 'best.json'
             if hof_path.exists():
                 with open(hof_path) as f:
@@ -131,8 +147,12 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._send_json({'error': 'no hall of fame yet'}, 404)
 
+        elif path == '/obstacles':
+            from obstacles import generate
+            obs = generate(OBSTACLE_MAP, WORLD_SIZE)
+            self._send_json({'obstacles': obs})
+
         elif path == '/teams':
-            # Return all team info: epochs, pool stats
             infos = engine.weight_manager.get_all_pools_info()
             result = {}
             for t, info in infos.items():
@@ -149,7 +169,6 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(result)
 
         elif path.startswith('/team/'):
-            # /team/<id> or /team/<name>
             team_identifier = path[6:]
             try:
                 team_id = int(team_identifier)
@@ -169,7 +188,6 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({'error': f'invalid team: {team_identifier}'}, 404)
 
         elif path.startswith('/weights/'):
-            # /weights/TeamName/model_NN.json
             fname = path.lstrip('/')
             fpath = STATIC_DIR / fname
             if fpath.exists() and 'weights' in fpath.parts:
@@ -181,6 +199,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_file(path.lstrip('/'))
 
     def do_POST(self):
+        global engine
         path = urlparse(self.path).path
 
         if path == '/stats':
@@ -195,9 +214,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             try:
-                alive = data.get('alive', [])
+                dead_stats = data.get('deadStats', [])
                 dead_teams = data.get('deadTeams', [])
-                evolutions = engine.evolve(alive, dead_teams)
+                evolutions = engine.evolve(dead_stats, dead_teams)
 
                 response = {
                     'evolutions': evolutions,
@@ -214,12 +233,54 @@ class Handler(BaseHTTPRequestHandler):
                             'epoch': pool.epoch,
                             'best_fitness': pool.get_best_fitness(),
                             'avg_fitness': pool.get_avg_fitness(),
+                            'fitness': pool.get_all_fitness(),
+                            'fitness_history': pool.epoch_fitness_log[-200:],
                         }
                 response['poolInfo'] = pool_info
 
+                # Append to stats_history.json for global graph
+                try:
+                    stats_file = STATIC_DIR / 'stats_history.json'
+                    hist = []
+                    if stats_file.exists():
+                        with open(stats_file, 'r') as sf:
+                            hist = json.load(sf)
+                    if isinstance(hist, list):
+                        for t_str, info in pool_info.items():
+                            hist.append({
+                                'team': int(t_str),
+                                'generation': engine.generation,
+                                'bestFitness': info.get('best_fitness', 0),
+                                'avgFitness': info.get('avg_fitness', 0),
+                                'epoch': info.get('epoch', 0),
+                            })
+                        if len(hist) > 2000:
+                            hist = hist[-2000:]
+                        with open(stats_file, 'w') as sf:
+                            json.dump(hist, sf)
+                except Exception:
+                    pass
+
                 self._send_json(response)
-            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
-                pass
+            except Exception:
+                self._send_json({'error': 'evolution failed'}, 500)
+
+        elif path == '/reset':
+            import shutil
+            weights_dir = STATIC_DIR / 'weights'
+            if weights_dir.exists():
+                shutil.rmtree(weights_dir)
+            stats_file = STATIC_DIR / 'stats_history.json'
+            if stats_file.exists():
+                stats_file.unlink()
+            engine = EvolutionEngine()
+            for _k in ['GAME_MODE','N_TEAMS','WORMS_PER_TEAM','MODELS_PER_TEAM',
+                       'FOOD_COUNT','ZONE_RADIUS','ZONE_DAMAGE',
+                       'OBSTACLES_ENABLED','OBSTACLE_MAP',
+                       'TEAM_NAMES','TEAM_COLORS','N_WORMS']:
+                if hasattr(config, _k):
+                    globals()[_k] = getattr(config, _k)
+            self._send_json({'ok': True, 'message': 'All weights and stats cleared. Engine reset.'})
 
         elif path == '/mode':
             length = int(self.headers.get('Content-Length', 0))
@@ -232,15 +293,27 @@ class Handler(BaseHTTPRequestHandler):
                 if mode not in ('ffa', 'team'):
                     self._send_json({'error': f'invalid mode: {mode}'}, 400)
                     return
-                global GAME_MODE
-                GAME_MODE = mode
-                print(f"  [mode] switched to {mode}")
-                if mode == 'ffa':
-                    # FFA: clear zones
-                    engine.zone_manager.zones = {}
-                else:
-                    engine.zone_manager.generate()
-                self._send_json({'gameMode': GAME_MODE})
+
+                print(f"  [mode] switching to {mode} — full restart")
+
+                # Save old mode weights
+                engine.weight_manager.save_all()
+
+                # Create fresh engine for new mode
+                engine = EvolutionEngine(mode=mode)
+
+                # Re-sync server module globals from config
+                for _k in ['GAME_MODE','N_TEAMS','WORMS_PER_TEAM','MODELS_PER_TEAM',
+                           'FOOD_COUNT','ZONE_RADIUS','ZONE_DAMAGE',
+                           'OBSTACLES_ENABLED','OBSTACLE_MAP',
+                           'TEAM_NAMES','TEAM_COLORS','N_WORMS']:
+                    if hasattr(config, _k):
+                        globals()[_k] = getattr(config, _k)
+
+                self._send_json({
+                    'gameMode': GAME_MODE,
+                    'reload': True,
+                })
             except Exception as e:
                 self._send_json({'error': str(e)}, 400)
 
@@ -248,15 +321,12 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({'error': 'not found'}, 404)
 
     def log_message(self, fmt, *args):
-        if '200' in str(args[1]) or '404' in str(args[1]):
-            return
         sys.stderr.write(f"[{self.log_date_time_string()}] {fmt % args}\n")
 
 
 def auto_save():
     """Auto-save all pools every 10 generations."""
     try:
-        from pathlib import Path
         weights_dir = Path(__file__).parent / 'weights'
         weights_dir.mkdir(exist_ok=True)
         best_fit = -1e9
@@ -264,7 +334,7 @@ def auto_save():
         for t in range(N_TEAMS):
             pool = engine.weight_manager.get_pool(t)
             if pool:
-                pool.save(weights_dir)
+                pool.save(engine.weight_manager.mode_path)
                 bf = pool.get_best_fitness()
                 if bf > best_fit:
                     best_fit = bf
@@ -273,33 +343,36 @@ def auto_save():
                         best_data = {'team': TEAM_NAMES[t], 'team_id': t,
                                      'epoch': pool.epoch, 'fitness': bf,
                                      'weights': list(bm.weights)}
-        # Hall of Fame
         if best_data:
             hof_dir = weights_dir / '_hall_of_fame'
             hof_dir.mkdir(exist_ok=True)
-            import json
             with open(hof_dir / 'best.json', 'w') as f:
                 json.dump(best_data, f)
         print(f"  [auto-save] gen {engine.generation}")
     except Exception as e:
         print(f"  [auto-save error] {e}")
 
+
 def main():
-    print(f"Slither Evo v2 — http://0.0.0.0:{PORT}")
-    print(f"   Local:  http://127.0.0.1:{PORT}")
-    print(f"   Mode:   {GAME_MODE}  (POST /mode to change)")
-    print(f"   Teams:  {N_TEAMS}, Worms: {N_WORMS}, Models/team: {MODELS_PER_TEAM}")
-    print(f"   Gen:    {engine.generation}, Best fitness: {engine.best_fitness_ever:.1f}")
-    print(f"   NN:     {N_INPUT}>{N_HIDDEN1}>{N_HIDDEN2}>{N_HIDDEN3}>{N_OUTPUT} ({WEIGHT_COUNT} weights)")
-    print(f"   Ctrl+C to stop")
+    print(f"+{'-'*46}+")
+    print(f"|  Slither Evo v2 — Server{' '*27}|")
+    print(f"+{'-'*46}+")
+    print(f"|  http://0.0.0.0:{PORT}")
+    print(f"|  Local:  http://127.0.0.1:{PORT}")
+    print(f"|  Mode:   {GAME_MODE}")
+    print(f"|  Teams:  {N_TEAMS}, Worms: {N_WORMS}, Models/team: {MODELS_PER_TEAM}")
+    print(f"|  Gen:    {engine.generation}")
+    print(f"|  NN:     {N_INPUT}>{N_HIDDEN1}>{N_HIDDEN2}>{N_HIDDEN3}>{N_OUTPUT} ({WEIGHT_COUNT} weights)")
+    print(f"|  Obstacles: {OBSTACLES_ENABLED} ({OBSTACLE_MAP})")
+    print(f"|  Ctrl+C to stop")
+    print(f"+{'-'*46}+")
 
     server = HTTPServer(('', PORT), Handler)
     last_save_gen = engine.generation
-    import time
     try:
         while True:
             server.handle_request()
-            if engine.generation - last_save_gen >= 10:
+            if engine.generation - last_save_gen >= AUTO_SAVE_INTERVAL:
                 auto_save()
                 last_save_gen = engine.generation
     except KeyboardInterrupt:

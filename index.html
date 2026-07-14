@@ -18,45 +18,46 @@ canvas{display:block;background:#0a0a15;cursor:grab}
 #lb .r .nm{font-weight:600}
 #lb .r .ms{color:#aaa}
 #lb .r .md{color:#555;font-size:9px}
+#lb .r .sc{color:#ffd700;font-size:9px;min-width:30px;text-align:right}
 #lb .sel{background:rgba(255,255,100,.06);border:1px solid rgba(255,255,100,.15)}
-#info{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:11px;color:#444;letter-spacing:.5px;z-index:5;pointer-events:none}
-#info span{color:#666}
 #hud{position:absolute;top:10px;left:10px;font-size:10px;color:#555;z-index:15;line-height:1.8;pointer-events:none}
 #hud div span{color:#aaa}
-#epoch-bar{position:absolute;top:76px;left:10px;font-size:9px;color:#666;z-index:14;pointer-events:none;display:flex;flex-wrap:wrap;gap:3px 6px;max-width:500px}
-#epoch-bar .eb-dot{width:7px;height:7px;border-radius:50%;display:inline-block;vertical-align:middle;margin-right:2px;flex-shrink:0}
-#epoch-bar .eb-item{display:inline-flex;align-items:center;gap:2px;white-space:nowrap;line-height:1.4}
-#epoch-bar .eb-num{color:#48f;font-family:monospace;font-size:8px}
-#gen-info{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);font-size:10px;color:#333;z-index:5;pointer-events:none}
-#server-msg{position:absolute;top:50px;left:50%;transform:translateX(-50%);font-size:12px;color:#f44;z-index:30;pointer-events:none;opacity:0;transition:opacity .3s}
-#team-wrap{position:absolute;left:10px;top:50%;transform:translateY(-50%);z-index:25;display:flex;align-items:flex-start;gap:0}
-#team-btn{writing-mode:vertical-lr;background:rgba(5,5,16,.8);border:1px solid #1a1a3a;color:#666;padding:10px 5px;cursor:pointer;border-radius:4px;font-size:10px;letter-spacing:1px;transition:.2s}
-#team-btn:hover{color:#aaa;background:rgba(5,5,16,.95)}
-#team-panel{display:none;width:300px;max-height:80vh;overflow-y:auto;background:rgba(5,5,16,.92);border:1px solid #1a1a3a;border-radius:6px;padding:8px 10px;font-size:10px;backdrop-filter:blur(6px);margin-left:4px}
-#team-panel.open{display:block}
-#team-panel::-webkit-scrollbar{width:3px}
-#team-panel::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
-.tp-hdr{font-size:12px;color:#888;margin-bottom:6px;letter-spacing:1px;text-align:center}
-.tp-row{display:flex;align-items:center;gap:5px;padding:2px 4px;border-radius:2px;margin:1px 0}
-.tp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.tp-name{flex:1;font-weight:600}
-.tp-stat{color:#aaa;text-align:right;min-width:18px}
-.tp-ep{color:#48f;min-width:22px;font-family:monospace}
-#controls{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);z-index:25;display:flex;gap:6px;align-items:center}
+#epoch-bar{position:absolute;top:54px;left:10px;font-size:9px;color:#666;z-index:14;pointer-events:none;max-width:500px;background:rgba(5,5,16,.7);border:1px solid #1a1a3a;border-radius:6px;padding:5px 8px;backdrop-filter:blur(4px)}
+#epoch-bar .eb-title{font-size:8px;color:#555;letter-spacing:1px;margin-bottom:3px}
+#epoch-bar .eb-dot{width:8px;height:8px;border-radius:50%;display:inline-block;vertical-align:middle;margin-right:4px;flex-shrink:0}
+#epoch-bar .eb-item{display:flex;align-items:center;gap:3px;white-space:nowrap;line-height:1.6;font-size:9px;margin:1px 0}
+#epoch-bar .eb-num{color:#48f;font-family:monospace;font-size:9px;font-weight:600}
+#epoch-bar .eb-name{color:#aaa;font-size:8px;margin-right:2px}
+#epoch-bar .eb-alive{color:#555;font-size:8px;margin-left:2px}
+#info{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);font-size:11px;color:#444;letter-spacing:.5px;z-index:5;pointer-events:none}
+#info span{color:#666}
+#controls{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);z-index:25;display:flex;gap:6px;align-items:center}
 #controls button{background:rgba(5,5,16,.8);border:1px solid #1a1a3a;color:#888;padding:4px 10px;cursor:pointer;border-radius:4px;font-size:11px;transition:.15s;font-family:monospace}
 #controls button:hover{color:#fff;background:rgba(5,5,16,.95);border-color:#333}
 #controls button.on{color:#4f8;border-color:#4f8}
+#fitgraph{position:absolute;bottom:68px;right:10px;z-index:20;border:1px solid #1a1a3a;border-radius:6px;background:rgba(5,5,16,0.85);backdrop-filter:blur(6px);pointer-events:none;overflow:hidden}
+#fitgraph .fgh{display:flex;justify-content:space-between;padding:4px 8px 2px;font:9px monospace;color:#555;border-bottom:1px solid #1a1a3a}
+#fitgraph .fgh span{color:#4f8}
+#fitgraph canvas{display:block;width:220px;height:90px}
+#mode-btn{position:absolute;bottom:68px;right:240px;z-index:25;background:rgba(5,5,16,.8);border:1px solid #1a1a3a;color:#888;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:9px;transition:.2s;font-family:monospace}
+#mode-btn:hover{color:#fff;border-color:#333}
 #srv-dot{position:absolute;top:10px;right:240px;width:8px;height:8px;border-radius:50%;z-index:20;pointer-events:none}
-#fitgraph{position:absolute;bottom:100px;right:10px;z-index:20;border:1px solid #1a1a3a;border-radius:6px;background:rgba(5,5,16,0.85);backdrop-filter:blur(6px);pointer-events:none;overflow:hidden}#fitgraph .fgh{display:flex;justify-content:space-between;padding:6px 8px 4px;font:10px monospace;color:#555;border-bottom:1px solid #1a1a3a}#fitgraph .fgh span{color:#4f8}#fitgraph canvas{display:block;width:280px;height:120px}#food-legend-btn{position:absolute;bottom:36px;right:10px;z-index:25;background:rgba(5,5,16,.8);border:1px solid #1a1a3a;color:#666;width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:12px;line-height:22px;text-align:center;padding:0;transition:.2s}
-#food-legend-btn:hover{color:#aaa;border-color:#333}
-#food-legend{position:absolute;bottom:62px;right:10px;z-index:25;display:none;width:260px;max-height:300px;overflow-y:auto;background:rgba(5,5,16,.95);border:1px solid #1a1a3a;border-radius:6px;padding:6px 8px;font-size:9px;backdrop-filter:blur(6px)}
-#food-legend.open{display:block}
-#food-legend::-webkit-scrollbar{width:3px}
-#food-legend::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
-.fl-row{display:flex;align-items:center;gap:4px;padding:1px 0}
-.fl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,.1)}
-.fl-name{flex:1;color:#aaa}
-.fl-stat{color:#555;font-family:monospace;font-size:8px}
+#server-msg{position:absolute;top:50px;left:50%;transform:translateX(-50%);font-size:12px;color:#f44;z-index:30;pointer-events:none;opacity:0;transition:opacity .3s}
+#worm-info{position:absolute;left:10px;top:100px;z-index:30;width:280px;background:rgba(5,5,16,.92);border:1px solid #1a1a3a;border-radius:8px;padding:10px;backdrop-filter:blur(8px);display:none;font-size:10px}
+#worm-info.open{display:block}
+#worm-info .wi-hdr{font-size:13px;margin-bottom:6px;display:flex;justify-content:space-between}
+#worm-info .wi-hdr .wi-close{cursor:pointer;color:#555;font-size:14px;padding:0 4px}
+#worm-info .wi-hdr .wi-close:hover{color:#f44}
+#worm-info .wi-row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+#worm-info .wi-row .wl{color:#888}
+#worm-info .wi-row .wv{color:#ddd;font-family:monospace}
+#worm-info .wi-nn-bar{height:12px;border-radius:6px;overflow:hidden;display:flex;margin:4px 0;border:1px solid rgba(255,255,255,.08)}
+#worm-info .wi-nn-bar div{height:100%;transition:width .3s}
+#worm-info .wi-nn-legend{display:flex;flex-wrap:wrap;gap:4px 10px;margin:4px 0 2px;font-size:8px}
+#worm-info .wi-nn-legend span{display:flex;align-items:center;gap:3px}
+#worm-info .wi-nn-legend .wl-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+#worm-info .wi-graph{width:100%;height:50px;margin:4px 0}
+#worm-info .wi-graph canvas{width:100%;height:100%;border-radius:4px}
 </style>
 </head>
 <body>
@@ -66,36 +67,36 @@ canvas{display:block;background:#0a0a15;cursor:grab}
 <div>GEN <span id=hGen>0</span></div>
 <div>ALIVE <span id=hAlive>0</span></div>
 <div>SPEED <span id=hSpeed>1.0</span>x</div>
+<div id=hMode></div>
 </div>
-<div id=epoch-bar></div>
+<div id=epoch-bar><div class=eb-title>EPOCHS</div></div>
 <div id=lb><div class=t>LEADERBOARD</div></div>
-<div id=team-wrap><button id=team-btn>TEAMS &gt;</button><div id=team-panel><div class=tp-hdr>TEAMS</div><div id=tp-body></div></div></div>
 <div id=controls>
-  <button id=btn-pause>⏸</button>
-  <button id=btn-1x class=on>1×</button>
-  <button id=btn-3x>3×</button>
-  <button id=btn-10x>10×</button>
+<button id=btn-pause>⏸</button>
+<button id=btn-1x class=on>1×</button>
+<button id=btn-3x>3×</button>
+<button id=btn-10x>10×</button>
 </div>
-
+<div id=fitgraph><div class=fgh>FITNESS <span id=fitlast>—</span></div><canvas id=fitcanv width=220 height=90></canvas></div>
+<div id=mode-btn>🎮 <span id=mode-lbl>TEAM</span></div>
+<button id=reset-btn onclick="resetAll()" style="position:absolute;bottom:102px;right:10px;z-index:25;background:rgba(5,5,16,.8);border:1px solid #a33;color:#c66;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:9px;font-family:monospace">⟳ RESET</button>
 <div id=srv-dot></div>
-<button id=food-legend-btn>?</button>
-<div id=mode-btn style="position:absolute;bottom:96px;right:10px;z-index:25;background:rgba(5,5,16,.8);border:1px solid #1a1a3a;color:#888;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:9px;transition:.2s;font-family:monospace" title="click to cycle modes">🎮 <span id=mode-lbl>TEAM</span></div>
-<div id=food-legend><div class=fl-row style=color:#555;justify-content:center;padding:10px>hover ? for food types</div></div>
-<div id=info><span>●</span> Slither Evo v2 — <span id=infoMap>50000</span> — drag to move · scroll to zoom · click name to follow</div>
-<div id=gen-info>SPACE to sprint · zones damage enemies · each worm has unique model</div>
+<div id=info><span>●</span> Slither Evo — <span id=infoMap></span> — drag · scroll · click worm for details</div>
 <div id=server-msg></div>
+<div id=worm-info></div>
 </div>
 <script>
-// ═══════════════════════════════════════════════════════════════
-// CONFIG (overridden by server on init)
-// ═══════════════════════════════════════════════════════════════
-let W=50000,H=50000,CELL=500,GRID=100
-let N_HIDDEN1=20,N_HIDDEN2=14,N_HIDDEN3=10,N_INPUT=26,N_OUTPUT=2,WC=1006
-let N_TEAMS=15,WPT=10,MPT=15
-let FOOD_COUNT=6500,SR=8,HR=14,SEG_DIST=14,INIT_SEG=15,SPEED=3.5,SPRINT_SPEED=7.0,SPRINT_MC=0.3,ZR=1800,ZD=0.5
-let TN=['Alpha','Shadow','Viper','Cobra','Storm','Blaze','Frost','Thorn','Venom','Ghost','Raven','Titan','Neon','Pixel','Flux']
-let TC=['#ff4455','#ff8822','#ffdd33','#44ee55','#00eebb','#44aaff','#5577ff','#bb55ff','#ff44aa','#ff6677','#99ff44','#44ffaa','#22ddff','#cc44ff','#ff88aa']
-let CN=TC.map(c=>parseInt(c.slice(1),16))
+// ═══════════════════════════════════════════════════════════════════
+// DYNAMIC CONFIG (from server)
+// ═══════════════════════════════════════════════════════════════════
+let W=20000,H=20000,CELL,Wc,Hc,GRID
+let N_HIDDEN1=30,N_HIDDEN2=22,N_HIDDEN3=16,N_INPUT=44,N_OUTPUT=4,WC
+let N_TEAMS=6,WPT=8,MPT=15
+let FOOD_COUNT=4000,SR=8,HR=14,SEG_DIST=14,INIT_SEG=15,SPEED=3.5,SPRINT_SPEED=7.0,SPRINT_MC=0.3,ZR=1800,ZD=0.5
+let TN=[],TC=[],CN=[],gameMode='team'
+let OBSTACLES_ENABLED=true
+
+// Food types (browser-side)
 const FTYPES=[
   {c:'#33cc66',mass:.08,pts:1,w:20,nm:'Verdant'},
   {c:'#44dd77',mass:.07,pts:1,w:18,nm:'Meadow'},
@@ -147,7 +148,6 @@ const FTYPES=[
   {c:'#7cfc00',mass:.50,pts:3,w:1,nm:'Legend'},
   {c:'#ff8c00',mass:.55,pts:3,w:1,nm:'Solar'},
   {c:'#ffb6c1',mass:.65,pts:4,w:1,nm:'Royal'},
-  // Special effect foods (indices 50+)
   {c:'#ffd700',mass:0,pts:0,w:3,nm:'Aegis',fx:'invulnerable'},
   {c:'#ff2244',mass:0,pts:0,w:2,nm:'Betrayal',fx:'team_kill'},
   {c:'#00ddff',mass:0,pts:0,w:4,nm:'Nitro',fx:'speed'},
@@ -161,47 +161,61 @@ const FTYPES=[
 ]
 const FTW=FTYPES.reduce((s,f)=>s+f.w,0)
 let foodTypeCounts=new Array(FTYPES.length).fill(0)
-
 const EFFECT_DUR={invulnerable:10,team_kill:8,speed:6,mass_regen:8,poison:5,shield:6,berserk:10,invisible:7}
 const EFFECT_ICON={invulnerable:'🛡️',team_kill:'⚔️',speed:'⚡',mass_regen:'💚',poison:'☠️',shield:'🔵',berserk:'🔥',invisible:'👻'}
 
-let gameMode='team'
-
-// ═══════════════════════════════════════════════════════════════
-// CANVAS
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// CANVAS & CAMERA
+// ═══════════════════════════════════════════════════════════════════
 const cv=document.getElementById('c'),cx=cv.getContext('2d')
-let Wc=window.innerWidth,Hc=window.innerHeight
-cv.width=Wc;cv.height=Hc
-window.addEventListener('resize',()=>{Wc=window.innerWidth;Hc=window.innerHeight;cv.width=Wc;cv.height=Hc})
+function resize(){Wc=window.innerWidth;Hc=window.innerHeight;cv.width=Wc;cv.height=Hc}
+resize();window.addEventListener('resize',resize)
 
-// ═══════════════════════════════════════════════════════════════
-// CAMERA
-// ═══════════════════════════════════════════════════════════════
 const cam={x:W/2,y:H/2,zoom:.12,tx:W/2,ty:H/2,tzoom:.12,spectate:null}
 let drag={d:false,lx:0,ly:0}
-cv.addEventListener('mousedown',e=>{if(e.button===2){cam.tx=cam.x;cam.ty=cam.y;cam.spectate=null;cam.tzoom=.08;return};drag.d=true;drag.lx=e.clientX;drag.ly=e.clientY;cv.style.cursor='grabbing';cam.spectate=null})
+cv.addEventListener('mousedown',e=>{
+  if(e.button===2){cam.tx=cam.x;cam.ty=cam.y;cam.spectate=null;return}
+  drag.d=true;drag.lx=e.clientX;drag.ly=e.clientY;cv.style.cursor='grabbing'
+})
 window.addEventListener('mousemove',e=>{if(!drag.d)return;cam.tx-=(e.clientX-drag.lx)/cam.tzoom;cam.ty-=(e.clientY-drag.ly)/cam.tzoom;drag.lx=e.clientX;drag.ly=e.clientY})
 window.addEventListener('mouseup',()=>{drag.d=false;cv.style.cursor='grab'})
 cv.addEventListener('wheel',e=>{e.preventDefault();const f=e.deltaY>0?.88:1.12;cam.tzoom=Math.max(.008,Math.min(2.5,cam.tzoom*f))},{passive:false})
 cv.addEventListener('contextmenu',e=>e.preventDefault())
+cv.addEventListener('click',e=>{
+  if(drag.d)return
+  const mx=(e.clientX-Wc/2)/cam.zoom+cam.x,my=(e.clientY-Hc/2)/cam.zoom+cam.y
+  let closest=null,cd=Infinity
+  for(const w of worms){if(!w.alive)continue;const d=Math.hypot(w.seg[0].x-mx,w.seg[0].y-my);if(d<cd&&d<HR*wormSize(w.mass)*5){cd=d;closest=w}}
+  if(closest)showWormInfo(closest);else hideWormInfo()
+})
 cv.addEventListener('touchstart',e=>{if(e.touches.length===1){drag.d=true;drag.lx=e.touches[0].clientX;drag.ly=e.touches[0].clientY}})
-window.addEventListener('touchmove',e=>{if(!drag.d||e.touches.length!==1)return;cam.tx-=(e.touches[0].clientX-drag.lx)/cam.tzoom;cam.ty-=(e.touches[0].clientY-drag.ly)/cam.tzoom;drag.lx=e.touches[0].clientX;drag.ly=e.touches[0].clientY})
-window.addEventListener('touchend',()=>{drag.d=false})
 
-// ═══════════════════════════════════════════════════════════════
+// SPACE to sprint spectated worm
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&cam.spectate!==null){e.preventDefault();const w=worms.find(x=>x.uid===cam.spectate);if(w&&w.alive)w.playerSprint=true}
+})
+document.addEventListener('keyup',e=>{
+  if(e.code==='Space'){const w=worms.find(x=>x.uid===cam.spectate);if(w)w.playerSprint=false}
+})
+
+// ═══════════════════════════════════════════════════════════════════
 // SPATIAL HASH
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 const grid={cells:[],clr(){this.cells=[];for(let i=0;i<GRID*GRID;i++)this.cells[i]=[]},
   key(x,y){const gx=Math.max(0,Math.min(GRID-1,Math.floor(x/CELL))),gy=Math.max(0,Math.min(GRID-1,Math.floor(y/CELL)));return gx+','+gy},
-  add(x,y,o){const k=this.key(x,y);if(!this.cells[k])this.cells[k]=[];this.cells[k].push(o)},
+  add(x,y,o){const k=this.key(x,y);const c=this.cells[k];if(c){c.push(o)}else{this.cells[k]=[o]}},
   get(x,y,r){const res=[],mx=Math.floor((x-r)/CELL),Mx=Math.floor((x+r)/CELL),my=Math.floor((y-r)/CELL),My=Math.floor((y+r)/CELL)
     for(let gx=mx;gx<=Mx;gx++)for(let gy=my;gy<=My;gy++){const k=gx+','+gy;if(this.cells[k])res.push(...this.cells[k])}return res}
 }
 
-// ═══════════════════════════════════════════════════════════════
-// NN — 26->20->14->10->2 → 1006 weights
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// OBSTACLES
+// ═══════════════════════════════════════════════════════════════════
+let obstacles=[]
+
+// ═══════════════════════════════════════════════════════════════════
+// NN — 44->30->22->16->4
+// ═══════════════════════════════════════════════════════════════════
 function nnF(w,inp){
   const tn=x=>x>100?1:x<-100?-1:x/(1+Math.abs(x))
   let off=0
@@ -219,108 +233,234 @@ function nnF(w,inp){
   const h2=layer(N_HIDDEN1,N_HIDDEN2);inp=h2
   const h3=layer(N_HIDDEN2,N_HIDDEN3);inp=h3
   const out=layer(N_HIDDEN3,N_OUTPUT)
-  return{turn:out[0],boost:Math.max(0,Math.min(1,(out[1]+1)/2))}
+  return{
+    turn:out[0],
+    boost:Math.max(0,Math.min(1,(out[1]+1)/2)),
+    behavior2:out[2],
+    behavior3:out[3],
+  }
 }
 function rW(){const w=new Float64Array(WC);for(let i=0;i<WC;i++)w[i]=(Math.random()-.5)*2;return w}
 
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // SPEED CONTROL
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 let paused=false,speedMul=1
 document.getElementById('btn-pause').onclick=()=>{paused=!paused;document.getElementById('btn-pause').textContent=paused?'▶':'⏸'}
 document.getElementById('btn-1x').onclick=()=>{speedMul=1;document.querySelectorAll('#controls button.on').forEach(b=>b.classList.remove('on'));document.getElementById('btn-1x').classList.add('on')}
 document.getElementById('btn-3x').onclick=()=>{speedMul=3;document.querySelectorAll('#controls button.on').forEach(b=>b.classList.remove('on'));document.getElementById('btn-3x').classList.add('on')}
 document.getElementById('btn-10x').onclick=()=>{speedMul=10;document.querySelectorAll('#controls button.on').forEach(b=>b.classList.remove('on'));document.getElementById('btn-10x').classList.add('on')}
 
-// ═══════════════════════════════════════════════════════════════
-// STARS
-// ═══════════════════════════════════════════════════════════════
-let stars=[]
-function genStars(){
-  stars=[]
-  for(let i=0;i<500;i++)stars.push({x:Math.random()*W*2-W*.5,y:Math.random()*H*2-H*.5,s:.3+Math.random()*1.2,b:.2+Math.random()*.8,p:Math.random()*Math.PI*2})
-}
-genStars()
-
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // PARTICLES
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 let particles=[]
-function spawnParticles(x,y,color,count,speed,life){
+function spawnParticles(x,y,color,count,spd,life){
   for(let i=0;i<count;i++){
-    const a=Math.random()*Math.PI*2,sp=speed*(.5+Math.random())
-    particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,l:life||.6,ml:life||.6,sz:.5+Math.random()*2,c:color})
+    const a=Math.random()*Math.PI*2,s=spd*(.5+Math.random())
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:life||.6,ml:life||.6,sz:.5+Math.random()*2.5,c:color})
   }
 }
 function updateParticles(dt){
   for(let i=particles.length-1;i>=0;i--){
-    const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vx*=.97;p.vy*=.97;p.l-=dt
+    const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vx*=.96;p.vy*=.96;p.l-=dt
     if(p.l<=0)particles.splice(i,1)
   }
 }
 function drawParticles(){
   for(const p of particles){
     const s=ws(p.x,p.y);if(s.x<-20||s.x>Wc+20||s.y<-20||s.y>Hc+20)continue
-    const a=Math.max(0,p.l/p.ml),sz=Math.max(.5,p.sz*a*cam.zoom*2)
-    cx.globalAlpha=a*.8;cx.fillStyle=p.c;cx.beginPath();cx.arc(s.x,s.y,sz,0,Math.PI*2);cx.fill()
+    const a=Math.max(0,p.l/p.ml),sz=Math.max(.5,p.sz*a*cam.zoom*2.5)
+    cx.globalAlpha=a*.7;cx.fillStyle=p.c;cx.beginPath();cx.arc(s.x,s.y,sz,0,Math.PI*2);cx.fill()
   }
   cx.globalAlpha=1
 }
 
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // SERVER STATUS
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 let serverOk=true
 function setServerStatus(ok){
   if(serverOk===ok)return;serverOk=ok
   document.getElementById('srv-dot').style.background=ok?'#4f8':'#f44'
 }
 
-// ═══════════════════════════════════════════════════════════════
-// FOOD LEGEND
-// ═══════════════════════════════════════════════════════════════
-document.getElementById('food-legend-btn').onclick=()=>{
-  const fl=document.getElementById('food-legend');fl.classList.toggle('open')
-  if(fl.classList.contains('open')){
-    let h=''
-    for(let i=0;i<FTYPES.length;i++){
-      const ft=FTYPES[i];h+=`<div class=fl-row><span class=fl-dot style=background:${ft.c}></span><span class=fl-name>${ft.nm}</span><span class=fl-stat>${ft.mass>0?'+':''}${ft.mass} · ${ft.pts}p</span></div>`
-    }
-    fl.innerHTML=h
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // MODE SWITCH
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 const modes=['team','ffa']
 function cycleMode(){
   const idx=modes.indexOf(gameMode);gameMode=modes[(idx+1)%modes.length]
   document.getElementById('mode-lbl').textContent=gameMode.toUpperCase()
-  fetch('/mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:gameMode})}).catch(()=>{})
-  if(gameMode==='ffa'){zones={}}else{genZones()}
+  fetch('/mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:gameMode})})
+    .then(r=>r.json()).then(d=>{if(d.reload)location.reload()}).catch(()=>{})
 }
 document.getElementById('mode-btn').onclick=cycleMode
 
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// PERCEPTION — 8 RAYS x 5 LAYERS
+// ═══════════════════════════════════════════════════════════════════
+const N_RAYS=8
+const RAY_ANGLES=[0,1,2,3,4,5,6,7].map(i=>i*Math.PI/4)
+const RAY_RANGES=[50,150,300,500,800]
+const RAY_RANGE_MAX=RAY_RANGES[RAY_RANGES.length-1]
+
+// Check if a point is inside any wall obstacle
+function pointInWall(px,py,r){
+  r=r||0
+  for(const o of obstacles){
+    if(o.type==='wall'){
+      const{x1,y1,x2,y2,thickness:t}=o
+      const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy)
+      if(len<0.1)continue
+      const t1=((px-x1)*dx+(py-y1)*dy)/(len*len)
+      if(t1<0||t1>1)continue
+      const ppx=x1+t1*dx,ppy=y1+t1*dy
+      const d=Math.abs((py-y1)*dx-(px-x1)*dy)/len
+      if(d<t/2+r)return true
+    }else if(o.type==='block'){
+      const d=Math.hypot(px-o.x,py-o.y)
+      if(d<o.radius+r)return true
+    }
+  }
+  return false
+}
+
+function rayObstacleHit(x,y,angle,maxDist,wormR){
+  wormR=wormR||0
+  const steps=Math.ceil(maxDist/20)
+  for(let i=1;i<=steps;i++){
+    const d=i*20,px=x+Math.cos(angle)*d,py=y+Math.sin(angle)*d
+    if(px<wormR||px>=W-wormR||py<wormR||py>=H-wormR)return d
+    if(pointInWall(px,py,wormR))return d
+  }
+  return maxDist
+}
+
+function raycastLayer(x,y,angle,range,findType,self){
+  const endX=x+Math.cos(angle)*range,endY=y+Math.sin(angle)*range
+  const steps=Math.ceil(range/15)
+  let bestObj=null,bestDist=range*2
+
+  if(findType==='wall'){
+    const d=rayObstacleHit(x,y,angle,range)
+    return{dist:d,val:d<range?1:0}
+  }
+
+  for(let i=1;i<=steps;i++){
+    const frac=i/steps
+    const px=x+(endX-x)*frac,py=y+(endY-y)*frac
+    const items=grid.get(px,py,20)
+    for(const item of items){
+      if(findType==='food'&&item.r!==undefined&&!item.w){
+        const d=Math.hypot(px-item.x,py-item.y)
+        if(d<bestDist&&d<range){bestDist=d;bestObj=item}
+      }else if(findType==='ally'&&item.w&&item.w!==self){
+        if(gameMode==='ffa'){bestDist=Math.min(bestDist,Math.hypot(px-item.x,py-item.y))}
+        else if(item.w.team===self.team){bestDist=Math.min(bestDist,Math.hypot(px-item.x,py-item.y))}
+      }else if(findType==='enemy'&&item.w&&item.w!==self){
+        if(gameMode==='ffa'){bestDist=Math.min(bestDist,Math.hypot(px-item.x,py-item.y))}
+        else if(item.w.team!==self.team){bestDist=Math.min(bestDist,Math.hypot(px-item.x,py-item.y))}
+      }else if(findType==='size'&&item.w&&item.w!==self){
+        if(bestDist>Math.hypot(px-item.x,py-item.y)){
+          bestDist=Math.hypot(px-item.x,py-item.y)
+          bestObj=item
+        }
+      }
+    }
+  }
+
+  if(findType==='size'&&bestObj&&bestObj.w){
+    return{dist:bestDist,val:Math.min(1,bestObj.w.mass/80)}
+  }
+  if(bestDist<range){
+    return{dist:bestDist,val:1-bestDist/range}
+  }
+  return{dist:range,val:0}
+}
+
+function getRayInputs(worm){
+  const h=worm.seg[0],wR=HR*wormSize(worm.mass)
+  const inp=[]
+  for(let ri=0;ri<N_RAYS;ri++){
+    const angle=worm.angle+RAY_ANGLES[ri]-Math.PI/2
+    for(let li=0;li<RAY_RANGES.length;li++){
+      const range=RAY_RANGES[li]
+
+      // Layer 0: Walls (nearest wall within range)
+      let wallVal=0
+      if(li===0){
+        const d=rayObstacleHit(h.x,h.y,angle,range,wR)
+        wallVal=d<range?1-range/d:0
+      }
+
+      // Layer 1: Food (nearest food within range)
+      let foodVal=0
+      if(li===1){
+        const res=raycastLayer(h.x,h.y,angle,range,'food',worm)
+        foodVal=res.val
+      }
+
+      // Layer 2: Ally (nearest ally within range)
+      let allyVal=0
+      if(li===2){
+        const res=raycastLayer(h.x,h.y,angle,range,'ally',worm)
+        allyVal=res.val
+      }
+
+      // Layer 3: Enemy (nearest enemy within range)
+      let enemyVal=0
+      if(li===3){
+        const res=raycastLayer(h.x,h.y,angle,range,'enemy',worm)
+        enemyVal=res.val
+      }
+
+      // Layer 4: Size/mass of nearest entity
+      let sizeVal=0
+      if(li===4){
+        const res=raycastLayer(h.x,h.y,angle,range,'size',worm)
+        sizeVal=res.val
+      }
+
+      let val=0
+      if(li===0)val=wallVal
+      else if(li===1)val=foodVal
+      else if(li===2)val=allyVal
+      else if(li===3)val=enemyVal
+      else if(li===4)val=sizeVal
+      inp.push(val)
+    }
+  }
+
+  // Extra inputs
+  inp.push(SPEED/6)
+  inp.push(Math.min(1,worm.mass/80))
+  inp.push(Math.min(1,worm.st/300))
+  inp.push(worm.zones.inEnemy?1:0)
+
+  return inp
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // ZONES
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 let zones={}
 function genZones(){
+  if(gameMode==='ffa'){zones={};return}
   const minDist=ZR*2.5,m=ZR+500
   zones={}
   for(let t=0;t<N_TEAMS;t++){
     let cx,cy,ok,att=0
     do{cx=m+Math.random()*(W-m*2);cy=m+Math.random()*(H-m*2);ok=true
-      for(const z of Object.values(zones)){const dx=cx-z.cx,dy=cy-z.cy;if(Math.sqrt(dx*dx+dy*dy)<minDist){ok=false;break}}
+      for(const z of Object.values(zones)){if(Math.hypot(cx-z.cx,cy-z.cy)<minDist){ok=false;break}}
       att++}while(!ok&&att<500)
     zones[t]={cx,cy,r:ZR}
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// FOOD — gradual respawn, no lag spikes
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// FOOD
+// ═══════════════════════════════════════════════════════════════════
 let foods=[],foodSpawnTick=0
 function pickFoodType(){
   let best=0,bestDef=-Infinity
@@ -332,10 +472,9 @@ function pickFoodType(){
   return best
 }
 function spawnFood(n){
-  const limit=n
-  for(let i=0;i<limit;i++){
+  for(let i=0;i<n;i++){
     const t=pickFoodType()
-    foods.push({x:Math.random()*W,y:Math.random()*H,r:3+Math.random()*2,t})
+    foods.push({x:Math.random()*W,y:Math.random()*H,r:3+Math.random()*2,t,phase:Math.random()*Math.PI*2})
     foodTypeCounts[t]++
   }
 }
@@ -353,104 +492,141 @@ function tickFood(){
 }
 function clearFood(){foods=[];foodTypeCounts=new Array(FTYPES.length).fill(0)}
 
-// ═══════════════════════════════════════════════════════════════
-// WORM — each worm gets a unique model from its team's pool
-// ═══════════════════════════════════════════════════════════════
-let wormIdCounter=0,teamDead=new Array(N_TEAMS).fill(0)
-let needsEvo=false,deadWormsStats=[]
+// ═══════════════════════════════════════════════════════════════════
+// WORM
+// ═══════════════════════════════════════════════════════════════════
+let wormIdCounter=0,teamDead=[],needsEvo=false,deadWormsStats=[]
 
+function wormSize(mass){return Math.min(3,1+(mass-1)*0.025)}
 class Worm{
   constructor(team,id,wg,modelIdx){
-    this.team=team;this.id=id;this.uid=wormIdCounter++;this.alive=true;this.mass=1;this.st=0;this.kills=0;this.foodEaten=0;this.distTraveled=0
+    this.team=team;this.id=id;this.uid=wormIdCounter++;this.alive=true
+    this.mass=1;this.st=0;this.kills=0;this.foodEaten=0;this.distTraveled=0;this.score=0
     this.wg=wg;this.modelIdx=modelIdx===undefined?Math.floor(Math.random()*MPT):modelIdx
     this.name=`${TN[team]}-${id+1}`
     this.c=CN[team]
     this.x=Math.random()*W;this.y=Math.random()*H;this.angle=Math.random()*Math.PI*2
-    this.sprinting=false;this.zones={inTeam:false,inEnemy:false}
+    this.sprinting=false;this.playerSprint=false
+    this.zones={inTeam:false,inEnemy:false}
     this.seg=[];for(let i=0;i<INIT_SEG;i++)this.seg.push({x:this.x,y:this.y})
     this.effects={};this.lastFoodTick=0;this.hunger=0;this.killsInEffect=0
+
+    // Tracking stats for fitness
+    this.peakMass=1;this.wallDeath=false;this.zoneTime=0;this.sprintTime=0
+
+    // Behavior tracking for NN usage chart
+    this.behaviorLog={sprint:0,eat:0,kill:0,idle:0,explore:0}
+    this.behaviorTicks=0
+  }
+
+  recordBehavior(type){
+    this.behaviorLog[type]=(this.behaviorLog[type]||0)+1
+    this.behaviorTicks++
   }
 
   think(){
     if(!this.alive)return
-    const h=this.seg[0],md=W
-    const foods=findFoods(h.x,h.y,3)
-    const enemies=findWorms(h.x,h.y,this,2,true)
-    const allies=findWorms(h.x,h.y,this,1,false)
-    const wd=wallDists(h.x,h.y,this.angle)
-    const nearestZ=Object.values(zones).reduce((b,z)=>{const d=Math.hypot(h.x-z.cx,h.y-z.cy);return d<b?d:b},Infinity)
-    const inp=[
-      Math.sin(this.angle-foods[0].angle),Math.cos(this.angle-foods[0].angle),Math.min(1,foods[0].dist/md),
-      Math.sin(this.angle-foods[1].angle),Math.cos(this.angle-foods[1].angle),Math.min(1,foods[1].dist/md),
-      Math.sin(this.angle-foods[2].angle),Math.cos(this.angle-foods[2].angle),Math.min(1,foods[2].dist/md),
-      Math.sin(this.angle-enemies[0].angle),Math.cos(this.angle-enemies[0].angle),Math.min(1,enemies[0].dist/md),
-      Math.sin(this.angle-enemies[1].angle),Math.cos(this.angle-enemies[1].angle),Math.min(1,enemies[1].dist/md),
-      Math.sin(this.angle-allies[0].angle),Math.cos(this.angle-allies[0].angle),Math.min(1,allies[0].dist/md),
-      SPEED/6,
-      Math.min(1,wd.f/md),Math.min(1,wd.l/md),Math.min(1,wd.r/md),
-      Math.min(1,this.mass/80),
-      Math.min(1,this.hunger/600),
-      this.zones.inEnemy?1:0,
-      Math.min(1,nearestZ/(md*.5))
-    ]
+    const inp=getRayInputs(this)
     const out=nnF(this.wg,inp)
     let turn=out.turn
     if(this.effects['curse'])turn=-turn
-    this.sprinting=out.boost>.6
-    if(this.sprinting&&this.mass<2)this.sprinting=false
-    this.angle+=turn*.07
+
+    // Determine behavior for stats
+    const targetFoodAngle=inp[5]  // food direction from ray 0 layer 1
+    const targetEnemyDist=inp[15] // enemy distance from ray 0 layer 3
+
+    if(this.playerSprint){
+      this.sprinting=true
+    }else{
+      this.sprinting=out.boost>0.6
+      if(this.sprinting&&this.mass<2)this.sprinting=false
+    }
+
+    if(this.sprinting){this.recordBehavior('sprint')}
+    else if(targetFoodAngle>0.3&&turn<0.3)this.recordBehavior('eat')
+    else if(targetEnemyDist<0.5&&turn>0.3)this.recordBehavior('kill')
+    else if(this.distTraveled>this.st*SPEED*0.3||this.distTraveled>100)this.recordBehavior('explore')
+    else this.recordBehavior('idle')
+
+    const tRate=0.07/wormSize(this.mass)
+    this.angle+=turn*tRate
     this.angle=((this.angle%(Math.PI*2))+Math.PI*2)%(Math.PI*2)
   }
 
   update(){
     if(!this.alive)return
     this.st+=1/60;this.hunger+=1/60
-    // Update effects
+    this.peakMass=Math.max(this.peakMass,this.mass)
+    if(this.sprinting)this.sprintTime+=1/60
     for(const type in this.effects){
       this.effects[type]-=1/60
       if(this.effects[type]<=0)delete this.effects[type]
     }
-    if(this.effects['mass_regen'])this.mass+=.02*(1/60)
-    if(this.effects['poison']){this.mass-=.03*(1/60);if(this.mass<1)this.mass=1}
-    let spd=this.sprinting?SPRINT_SPEED:SPEED
-    if(this.effects['speed'])spd*=2
+    if(this.effects['mass_regen'])this.mass+=.03*(1/60)
+    if(this.effects['poison']){this.mass-=.04*(1/60);if(this.mass<1)this.mass=1}
+
+    const wSz=wormSize(this.mass),hs=HR*wSz,ss=SR*wSz
+    let spd=(this.sprinting?SPRINT_SPEED:SPEED)/(1+(wSz-1)*0.35)
+    if(this.effects['speed'])spd*=2.5
     let nx=this.seg[0].x+Math.cos(this.angle)*spd
     let ny=this.seg[0].y+Math.sin(this.angle)*spd
     this.distTraveled+=Math.hypot(nx-this.seg[0].x,ny-this.seg[0].y)
-    if(nx<0||nx>=W||ny<0||ny>=H){this.die(true);return}
+
+    // Wall collision (uses head radius for realistic edge contact)
+    if(nx<hs||nx>W-hs||ny<hs||ny>H-hs){this.wallDeath=true;this.die(true);return}
+
+    // Obstacle wall collision
+    if(pointInWall(nx,ny,hs)){
+      const angled=this.angle+Math.PI/2
+      nx=this.seg[0].x+Math.cos(angled)*spd*.5
+      ny=this.seg[0].y+Math.sin(angled)*spd*.5
+      if(pointInWall(nx,ny,hs)){this.die();return}
+    }
+
     this.zones={inTeam:false,inEnemy:false}
-    // Zones: skip in FFA mode
     if(gameMode!=='ffa'){
       for(const[t,z]of Object.entries(zones)){
-        const dx=nx-z.cx,dy=ny-z.cy,dist=Math.sqrt(dx*dx+dy*dy)
-        if(dist<=z.r){
+        const dx=nx-z.cx,dy=ny-z.cy
+        if(dx*dx+dy*dy<=z.r*z.r){
           if(parseInt(t)===this.team)this.zones.inTeam=true
-          else if(!this.effects['invulnerable']){this.zones.inEnemy=true;this.mass-=ZD*2*(1/60);if(this.mass<=0){this.die();return}}
+          else if(!this.effects['invulnerable']){this.zones.inEnemy=true;this.zoneTime+=1/60;this.mass-=ZD*2*(1/60);if(this.mass<=0){this.die();return}}
         }
       }
     }
-    if(this.sprinting){this.mass-=SPRINT_MC*(1/60);if(this.mass<1)this.mass=1}
-    const n=grid.get(nx,ny,HR*2)
+
+    if(this.sprinting){
+      const sprintCost=SPRINT_MC*2*(1/60)
+      this.mass-=sprintCost
+      if(this.mass<1)this.mass=1
+    }
+
+    const n=grid.get(nx,ny,hs*2)
     for(const s of n){
       if(!s.w||s.w===this)continue
       const sameTeam=s.w.team===this.team
       if(sameTeam&&!this.effects['team_kill']&&!s.w.effects['team_kill'])continue
-      if(gameMode!=='ffa'&&sameTeam)continue  // in team mode, skip team collision unless effect
+      if(gameMode!=='ffa'&&sameTeam)continue
       const dx=nx-s.x,dy=ny-s.y
-      if(dx*dx+dy*dy<(HR+SR)*(HR+SR)){
-        if(this.effects['invulnerable']){this.die();return} // invulnerable: attacker dies (reflect)
-        if(this.effects['shield']){this.die();s.w.die();return} // both die
+      if(dx*dx+dy*dy<(hs+ss)*(hs+ss)){
+        if(this.effects['invulnerable']){this.die();return}
+        if(this.effects['shield']){this.die();s.w.die();return}
         this.die()
-        if(!s.w.effects['invulnerable']){s.w.mass+=this.mass*.3;s.w.kills++}
+        if(!s.w.effects['invulnerable']){s.w.mass+=this.mass*.3;s.w.kills++;s.w.score+=8}
         if(this.effects['berserk'])this.killsInEffect++
+        this.recordBehavior('kill')
         return
       }
     }
+
     this.seg.unshift({x:nx,y:ny})
-    let ate=false
     for(let i=foods.length-1;i>=0;i--){
       const f=foods[i],dx=nx-f.x,dy=ny-f.y
-      if(dx*dx+dy*dy<HR*HR){
+      if(dx*dx+dy*dy<hs*hs){
+        if(f.noReward){
+          if(f.t!==undefined&&f.t<FTYPES.length)foodTypeCounts[f.t]--
+          foods.splice(i,1)
+          continue
+        }
         const ft=f.t!==undefined&&f.t<FTYPES.length?FTYPES[f.t]:FTYPES[0]
         if(ft.fx&&EFFECT_DUR[ft.fx]){
           const dur=EFFECT_DUR[ft.fx]
@@ -458,21 +634,26 @@ class Worm{
           else this.effects[ft.fx]=dur
           spawnParticles(nx,ny,ft.c,8,2,.6)
         }else{
-          if(ft.mass>0)this.foodEaten++
+          if(ft.mass>0){
+            this.foodEaten++
+            this.score+=1
+          }
           this.mass+=ft.mass
           if(this.mass<1)this.mass=1
           if(ft.effect==='growth'){this.mass*=2;const tl=Math.floor(INIT_SEG+Math.min(this.mass*2.5,200));while(this.seg.length<tl)this.seg.push({x:this.seg[this.seg.length-1].x,y:this.seg[this.seg.length-1].y})}
-          spawnParticles(nx,ny,ft.c,4,1,.4)
+          spawnParticles(nx,ny,ft.c,6,1.2,.4)
         }
         if(f.t!==undefined&&f.t<FTYPES.length)foodTypeCounts[f.t]--
         this.lastFoodTick=this.st;this.hunger=0
-        foods.splice(i,1);ate=true
+        foods.splice(i,1)
       }
     }
-    if(this.sprinting&&this.st%3===0){
+
+    if(this.sprinting&&fc%18===0&&this.mass>2){
       const bx=this.seg[this.seg.length-1]||this.seg[0]
-      const dt=pickFoodType();foods.push({x:bx.x+(Math.random()-.5)*5,y:bx.y+(Math.random()-.5)*5,r:3,t:dt});foodTypeCounts[dt]++
+      const dt=pickFoodType();foods.push({x:bx.x+(Math.random()-.5)*5,y:bx.y+(Math.random()-.5)*5,r:3,t:dt,phase:Math.random()*Math.PI*2,noReward:true});foodTypeCounts[dt]++
     }
+
     const tl=Math.floor(INIT_SEG+Math.min(this.mass*2.5,200))
     while(this.seg.length>tl)this.seg.pop()
     while(this.seg.length<tl)this.seg.push({x:this.seg[this.seg.length-1].x,y:this.seg[this.seg.length-1].y})
@@ -480,82 +661,365 @@ class Worm{
 
   die(fromWall){
     if(this.effects['invulnerable'])return
-    deadWormsStats.push({team:this.team,id:this.id,modelId:this.modelIdx,mass:this.mass,survivalTime:this.st,kills:this.kills,foodEaten:this.foodEaten,distanceTraveled:this.distTraveled})
+    deadWormsStats.push({
+      team:this.team,id:this.id,modelId:this.modelIdx,
+      mass:this.mass,survivalTime:this.st,kills:this.kills,
+      foodEaten:this.foodEaten,distanceTraveled:this.distTraveled,
+      wallDeath:this.wallDeath,peakMass:this.peakMass,
+      zoneTime:this.zoneTime,sprintTime:this.sprintTime
+    })
     this.alive=false;teamDead[this.team]++
-    if(teamDead[this.team]>=WPT)needsEvo=true
-    spawnParticles(this.seg[0].x,this.seg[0].y,this.c,20,3,.8)
-    const dropCount=Math.min(30,Math.floor(this.mass*4))
+    // The configured team size can drift from the actual list of worms.
+    // Respawn only when this team truly has no living members left.
+    if(worms.length&&worms.every(w=>w.team!==this.team||!w.alive))eliminateTeam(this.team)
+    const dieSz=wormSize(this.mass)
+    spawnParticles(this.seg[0].x,this.seg[0].y,this.c,Math.floor(20*dieSz),4,1)
+    const dropCount=Math.min(40,Math.floor(this.mass*5))
     for(let i=0;i<dropCount;i++){
       const dt=pickFoodType()
-      const f={x:this.seg[0].x+(Math.random()-.5)*40,y:this.seg[0].y+(Math.random()-.5)*40,r:3+Math.random()*4,t:dt}
+      const f={x:this.seg[0].x+(Math.random()-.5)*40,y:this.seg[0].y+(Math.random()-.5)*40,r:3+Math.random()*4,t:dt,phase:Math.random()*Math.PI*2}
       if(fromWall){f.wallDeath=true;f.deathTick=fc}
       foods.push(f);foodTypeCounts[dt]++
     }
   }
 
   reset(wg,modelIdx){
-    this.alive=true;this.mass=1;this.st=0;this.kills=0;this.foodEaten=0;this.distTraveled=0;this.sprinting=false;this.effects={};this.hunger=0;this.killsInEffect=0
+    this.alive=true;this.mass=1;this.st=0;this.kills=0;this.foodEaten=0;this.distTraveled=0;this.score=0
+    this.sprinting=false;this.playerSprint=false;this.effects={};this.hunger=0;this.killsInEffect=0
     this.wg=wg;this.modelIdx=modelIdx===undefined?Math.floor(Math.random()*MPT):modelIdx
     this.x=Math.random()*W;this.y=Math.random()*H;this.angle=Math.random()*Math.PI*2
     this.seg=[];for(let i=0;i<INIT_SEG;i++)this.seg.push({x:this.x,y:this.y})
+    this.peakMass=1;this.wallDeath=false;this.zoneTime=0;this.sprintTime=0
+    this.behaviorLog={sprint:0,eat:0,kill:0,idle:0,explore:0};this.behaviorTicks=0
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// PERCEPTION — multi-object (3 foods, 2 enemies, 1 ally)
-// ═══════════════════════════════════════════════════════════════
-function findFoods(x,y,count){
-  const items=grid.get(x,y,1200).filter(i=>i.r!==undefined)
-  const withDist=items.map(f=>{const d=Math.sqrt((x-f.x)**2+(y-f.y)**2)-f.r;return{...f,dd:Math.max(0,d)}})
-  withDist.sort((a,b)=>a.dd-b.dd)
-  const res=[]
-  for(let i=0;i<count&&i<withDist.length;i++)res.push({angle:Math.atan2(withDist[i].y-y,withDist[i].x-x),dist:withDist[i].dd})
-  while(res.length<count)res.push({angle:0,dist:W})
-  return res
-}
-function findWorms(x,y,self,count,enemies){
-  const items=grid.get(x,y,1200).filter(s=>s.w&&s.w!==self)
-  const filtered=enemies?items.filter(s=>{
-    if(gameMode==='ffa')return true
-    return s.w.team!==self.team
-  }):items.filter(s=>s.w.team===self.team)
-  const withDist=filtered.map(s=>{const d=Math.hypot(s.x-x,s.y-y);return{...s,dd:d}})
-  withDist.sort((a,b)=>a.dd-b.dd)
-  const res=[]
-  for(let i=0;i<count&&i<withDist.length;i++)res.push({angle:Math.atan2(withDist[i].y-y,withDist[i].x-x),dist:withDist[i].dd,w:withDist[i].w})
-  while(res.length<count)res.push({angle:0,dist:W,w:null})
-  return res
-}
-function wallDists(x,y,a){
-  const ca=(ad)=>{for(let i=1;i<=50;i++){const tx=x+Math.cos(ad)*i*20,ty=y+Math.sin(ad)*i*20;if(tx<0||tx>=W||ty<0||ty>=H)return i*20}return W}
-  return{f:ca(a),l:ca(a-Math.PI/3),r:ca(a+Math.PI/3)}
+// ═══════════════════════════════════════════════════════════════════
+// WORM INFO PANEL
+// ═══════════════════════════════════════════════════════════════════
+let selectedWorm=null
+
+function showWormInfo(w){
+  selectedWorm=w
+  const panel=document.getElementById('worm-info')
+  panel.classList.add('open')
+  updateWormInfo()
 }
 
-// ═══════════════════════════════════════════════════════════════
-// PERSONALITY
-// ═══════════════════════════════════════════════════════════════
+function hideWormInfo(){
+  selectedWorm=null
+  document.getElementById('worm-info').classList.remove('open')
+}
+
+function updateWormInfo(){
+  const w=selectedWorm
+  if(!w||!w.alive){hideWormInfo();return}
+  const panel=document.getElementById('worm-info')
+  const col='#'+w.c.toString(16).padStart(6,'0')
+
+  const bt=w.behaviorTicks||1
+  const sprintP=((w.behaviorLog.sprint||0)/bt*100).toFixed(0)
+  const eatP=((w.behaviorLog.eat||0)/bt*100).toFixed(0)
+  const killP=((w.behaviorLog.kill||0)/bt*100).toFixed(0)
+  const exploreP=((w.behaviorLog.explore||0)/bt*100).toFixed(0)
+  const idleP=((w.behaviorLog.idle||0)/bt*100).toFixed(0)
+
+  // Model fitness history (try team history, fallback to global)
+  let mh=modelFitnessHistory[w.team]||[]
+  if(mh.length<2)mh=fitData||[]
+  const mf=modelFitness[w.team]||{}
+  const thisF=mf[w.modelIdx]!==undefined?mf[w.modelIdx]:null
+
+  let graphHtml=''
+  if(mh.length>1){
+    graphHtml=`<div class=wi-graph><canvas id=wi-g-canvas width=260 height=50></canvas></div>`
+  }
+
+  const peakFit=mh.length>1?Math.max(...mh.filter(v=>v!==null&&v!==undefined)):null
+
+  panel.innerHTML=`
+    <div class=wi-hdr>
+      <span style=color:${col}>${w.name}</span>
+      <span class=wi-close onclick="hideWormInfo()">✕</span>
+    </div>
+    <div class=wi-row><span class=wl>Mass</span><span class=wv>${w.mass.toFixed(1)}</span></div>
+    <div class=wi-row><span class=wl>Score</span><span class=wv style=color:#ffd700>${Math.floor(w.score)}</span></div>
+    <div class=wi-row><span class=wl>Kills</span><span class=wv>${w.kills}</span></div>
+    <div class=wi-row><span class=wl>Food</span><span class=wv>${w.foodEaten}</span></div>
+    <div class=wi-row><span class=wl>Survival</span><span class=wv>${w.st.toFixed(0)}s</span></div>
+    <div class=wi-row><span class=wl>Distance</span><span class=wv>${Math.floor(w.distTraveled)}</span></div>
+    <div class=wi-row><span class=wl>Model #${w.modelIdx}</span><span class=wv style=color:${thisF!==null?'#ffd700':'#666'}>${thisF!==null?'fit: '+thisF.toFixed(1):'—'}</span></div>
+    <div style=margin-top:6px;font-size:9px;color:#888>Neural Network Activity</div>
+    <div class=wi-nn-bar>
+      <div style="width:${sprintP}%;background:#ffdd33;height:100%;float:left"></div>
+      <div style="width:${eatP}%;background:#44ee55;height:100%;float:left"></div>
+      <div style="width:${killP}%;background:#ff4455;height:100%;float:left"></div>
+      <div style="width:${exploreP}%;background:#44aaff;height:100%;float:left"></div>
+      <div style="width:${idleP}%;background:#555;height:100%;float:left"></div>
+    </div>
+    <div class=wi-nn-legend>
+      <span><span class=wl-dot style=background:#ffdd33></span>Sprint ${sprintP}%</span>
+      <span><span class=wl-dot style=background:#44ee55></span>Eat ${eatP}%</span>
+      <span><span class=wl-dot style=background:#ff4455></span>Fight ${killP}%</span>
+      <span><span class=wl-dot style=background:#44aaff></span>Explore ${exploreP}%</span>
+      <span><span class=wl-dot style=background:#555></span>Idle ${idleP}%</span>
+    </div>
+    ${graphHtml}
+    <div style=font-size:7px;color:#444;margin-top:2px>Data: ${mh.length} pts · peak: ${peakFit!==null?peakFit.toFixed(1):'—'}</div>
+  `
+
+  // Draw fitness mini-graph
+  if(mh.length>1){
+    const gcv=document.getElementById('wi-g-canvas')
+    if(gcv){
+      const gctx=gcv.getContext('2d')
+      const gw=gcv.width,gh=gcv.height
+      gctx.clearRect(0,0,gw,gh)
+      gctx.fillStyle='rgba(0,0,0,0.3)';gctx.fillRect(0,0,gw,gh)
+      const data=mh.filter(v=>v!==null&&v!==undefined)
+      if(data.length>1){
+        const maxV=Math.max(...data,1),minV=Math.min(...data,0),rg=maxV-minV||1
+        gctx.beginPath()
+        for(let i=0;i<data.length;i++){
+          const x=(i/(data.length-1||1))*gw,y=gh-(data[i]-minV)/rg*gh
+          i===0?gctx.moveTo(x,y):gctx.lineTo(x,y)
+        }
+        gctx.strokeStyle=col;gctx.lineWidth=1.5;gctx.stroke()
+
+        // Peak/last markers
+        const peakIdx=data.indexOf(Math.max(...data))
+        const lastIdx=data.length-1
+        for(const idx of[peakIdx,lastIdx]){
+          const x=(idx/(data.length-1||1))*gw,y=gh-(data[idx]-minV)/rg*gh
+          gctx.fillStyle=idx===peakIdx?'#44ff88':'#fff'
+          gctx.beginPath();gctx.arc(x,y,3,0,Math.PI*2);gctx.fill()
+        }
+
+        // Horizontal line at median
+        const med=(minV+maxV)/2
+        const medY=gh-(med-minV)/rg*gh
+        gctx.strokeStyle='rgba(255,255,255,0.06)';gctx.lineWidth=0.5
+        gctx.setLineDash([2,3]);gctx.beginPath();gctx.moveTo(0,medY);gctx.lineTo(gw,medY);gctx.stroke();gctx.setLineDash([])
+      }
+    }
+  }
+}
+
+// Live refresh worm info while alive
+
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════════
+function ws(x,y){return{x:(x-cam.x)*cam.zoom+Wc/2,y:(y-cam.y)*cam.zoom+Hc/2}}
+
+function render(){
+  cx.fillStyle='#0a0a15';cx.fillRect(0,0,Wc,Hc)
+
+  // Stars
+  if(typeof stars==='undefined'){window.stars=[];for(let i=0;i<300;i++)stars.push({x:Math.random()*Wc*2-Wc*.5,y:Math.random()*Hc*2-Hc*.5,s:.3+Math.random()*1,b:.2+Math.random()*.8,p:Math.random()*Math.PI*2})}
+  for(const st of stars){
+    const twinkle=.6+.4*Math.sin(fc*.03+st.p)
+    cx.fillStyle=`rgba(255,255,255,${(st.b*twinkle)*.3+.1})`;cx.fillRect(st.x,st.y,st.s,st.s)
+  }
+
+  // Obstacles
+  for(const o of obstacles){
+    if(o.type==='wall'){
+      const s=ws(o.x1,o.y1),e=ws(o.x2,o.y2)
+      cx.strokeStyle='#1a1a3a';cx.lineWidth=Math.max(1,o.thickness*cam.zoom)
+      cx.beginPath();cx.moveTo(s.x,s.y);cx.lineTo(e.x,e.y);cx.stroke()
+      cx.strokeStyle='rgba(30,30,60,0.3)';cx.lineWidth=Math.max(1,o.thickness*cam.zoom+4)
+      cx.beginPath();cx.moveTo(s.x,s.y);cx.lineTo(e.x,e.y);cx.stroke()
+    }else if(o.type==='block'){
+      const s=ws(o.x,o.y),r=o.radius*cam.zoom
+      if(s.x<-r-50||s.x>Wc+r+50||s.y<-r-50||s.y>Hc+r+50)continue
+      const gr=cx.createRadialGradient(s.x-r*.2,s.y-r*.2,0,s.x,s.y,r)
+      gr.addColorStop(0,'#1e1e3e');gr.addColorStop(1,'#0a0a1e')
+      cx.fillStyle=gr;cx.beginPath();cx.arc(s.x,s.y,r,0,Math.PI*2);cx.fill()
+      cx.strokeStyle='#2a2a4a';cx.lineWidth=1.5;cx.beginPath();cx.arc(s.x,s.y,r,0,Math.PI*2);cx.stroke()
+    }
+  }
+
+  // Zones
+  const pulse=.7+.3*Math.sin(fc*.02)
+  for(const[t,z]of Object.entries(zones)){
+    const c=ws(z.cx,z.cy),r=z.r*cam.zoom
+    if(c.x<-r-100||c.x>Wc+r+100||c.y<-r-100||c.y>Hc+r+100)continue
+    cx.beginPath();cx.arc(c.x,c.y,r,0,Math.PI*2)
+    cx.fillStyle=(TC[t]||'#444')+'08';cx.fill()
+    cx.strokeStyle=(TC[t]||'#444')+Math.floor(40*pulse).toString(16).padStart(2,'0');cx.lineWidth=2.5;cx.stroke()
+    if(gameMode!=='ffa'){
+      cx.fillStyle='#ffffff20';cx.font='bold 9px sans-serif';cx.textAlign='center'
+      cx.fillText(TN[t]||'',c.x,c.y-5)
+      cx.fillStyle='#ffffff10';cx.font='7px sans-serif'
+      cx.fillText('EPOCH '+(teamEpochs[parseInt(t)]||0),c.x,c.y+8)
+    }
+  }
+
+  // Grid
+  const gs=1000
+  const minX=Math.max(0,Math.floor((cam.x-Wc/2/cam.zoom)/gs)*gs)
+  const maxX=Math.min(W,Math.ceil((cam.x+Wc/2/cam.zoom)/gs)*gs)
+  const minY=Math.max(0,Math.floor((cam.y-Hc/2/cam.zoom)/gs)*gs)
+  const maxY=Math.min(H,Math.ceil((cam.y+Hc/2/cam.zoom)/gs)*gs)
+  cx.strokeStyle='#0d0d20';cx.lineWidth=.5
+  for(let x=minX;x<=maxX;x+=gs){const s=ws(x,minY),e=ws(x,maxY);cx.beginPath();cx.moveTo(s.x,s.y);cx.lineTo(e.x,e.y);cx.stroke()}
+  for(let y=minY;y<=maxY;y+=gs){const s=ws(minX,y),e=ws(maxX,y);cx.beginPath();cx.moveTo(s.x,s.y);cx.lineTo(e.x,e.y);cx.stroke()}
+
+  const tl=ws(0,0),br=ws(W,H)
+  cx.strokeStyle='#1a1a3a';cx.lineWidth=2;cx.strokeRect(tl.x,tl.y,br.x-tl.x,br.y-tl.y)
+
+  // Food
+  for(const f of foods){
+    const s=ws(f.x,f.y)
+    if(s.x<-10||s.x>Wc+10||s.y<-10||s.y>Hc+10)continue
+    const ft=f.t!==undefined&&f.t<FTYPES.length?FTYPES[f.t]:FTYPES[0]
+    const sz=Math.max(1,f.r*cam.zoom*(.8+Math.abs(ft.mass)*1.8))
+    const pulseF=.9+.1*Math.sin(fc*.05+(f.phase||0))
+    cx.fillStyle=ft.c
+    cx.globalAlpha=pulseF
+    if(ft.fx){
+      cx.beginPath();cx.arc(s.x,s.y,sz*pulseF,0,Math.PI*2);cx.fill()
+      cx.strokeStyle='#fff';cx.globalAlpha=.2;cx.lineWidth=1;cx.beginPath();cx.arc(s.x,s.y,sz*1.3,0,Math.PI*2);cx.stroke()
+    }else if(ft.mass<0){
+      const r=Math.max(2,sz)
+      cx.fillRect(s.x-r*.7,s.y-r*.7,r*1.4,r*1.4)
+      cx.fillStyle='#000a';cx.font=(r)+'px sans-serif';cx.textAlign='center';cx.textBaseline='middle';cx.fillText('✕',s.x,s.y+1)
+    }else{
+      cx.beginPath();cx.arc(s.x,s.y,sz*pulseF,0,Math.PI*2);cx.fill()
+    }
+    cx.globalAlpha=1
+  }
+
+  drawParticles()
+
+  const spectateW=cam.spectate!==null?worms.find(w=>w.uid===cam.spectate):null
+
+  // Sort worms by mass for proper layering
+  const sortedWorms=[...worms].filter(w=>w.alive).sort((a,b)=>a.mass-b.mass)
+
+  for(const w of sortedWorms){
+    const h=ws(w.seg[0].x,w.seg[0].y)
+    if(h.x<-300||h.x>Wc+300||h.y<-300||h.y>Hc+300)continue
+    const col='#'+w.c.toString(16).padStart(6,'0')
+    const cr=(w.c>>16)&255,cg=(w.c>>8)&255,cb=w.c&255
+    const dark=`rgb(${Math.floor(cr*.2)},${Math.floor(cg*.2)},${Math.floor(cb*.2)})`
+    const light=`rgb(${Math.min(255,cr+60)},${Math.min(255,cg+60)},${Math.min(255,cb+60)})`
+
+    const wSize=wormSize(w.mass)
+    const zMult=w.zones.inEnemy?1.3:w.zones.inTeam?1.15:1
+
+    // Shadow beneath worm
+    cx.globalAlpha=0.12
+    for(let i=w.seg.length-1;i>=0;i--){
+      const s=ws(w.seg[i].x+3,w.seg[i].y+3),sr=Math.max(1,((SR-(i/w.seg.length)*SR*0.3)*wSize*cam.zoom*zMult))
+      cx.fillStyle='#000';cx.beginPath();cx.arc(s.x,s.y,sr,0,Math.PI*2);cx.fill()
+    }
+    const hShadow=ws(h.x+3,h.y+3),hSr=HR*wSize*cam.zoom*zMult
+    cx.fillStyle='#000';cx.beginPath();cx.arc(hShadow.x,hShadow.y,hSr,0,Math.PI*2);cx.fill()
+    cx.globalAlpha=1
+
+    // Body segments with gradient and outline
+    for(let i=w.seg.length-1;i>=0;i--){
+      const s=ws(w.seg[i].x,w.seg[i].y),size=(SR-(i/w.seg.length)*SR*0.3)*wSize*cam.zoom*zMult
+      const sr=Math.max(1,size)
+      const alpha=.3+.7*(1-i/w.seg.length)
+      cx.globalAlpha=alpha
+      const gr=cx.createRadialGradient(s.x-sr*.25,s.y-sr*.25,0,s.x,s.y,sr)
+      gr.addColorStop(0,light);gr.addColorStop(.4,col);gr.addColorStop(.85,col);gr.addColorStop(1,dark)
+      cx.fillStyle=gr;cx.beginPath();cx.arc(s.x,s.y,sr,0,Math.PI*2);cx.fill()
+      cx.strokeStyle=dark;cx.lineWidth=0.5;cx.stroke()
+    }
+    cx.globalAlpha=1
+
+    // Head (slightly elongated for slither-like look)
+    const hr=HR*wSize*cam.zoom*zMult
+    const seg1=w.seg[1]||w.seg[0]
+    const ea=Math.atan2(w.seg[0].y-seg1.y,w.seg[0].x-seg1.x)
+    cx.save();cx.translate(h.x,h.y);cx.rotate(ea)
+    const hg=cx.createRadialGradient(-hr*.1,-hr*.15,0,0,0,hr)
+    hg.addColorStop(0,'#fff');hg.addColorStop(.08,light);hg.addColorStop(.45,col);hg.addColorStop(1,dark)
+    cx.fillStyle=hg
+    cx.beginPath();cx.ellipse(0,0,hr*1.15,hr,0,0,Math.PI*2);cx.fill()
+    cx.strokeStyle=dark;cx.lineWidth=0.8;cx.stroke()
+    cx.restore()
+
+    // Sprint ring
+    if(w.sprinting){
+      cx.strokeStyle='rgba(255,255,255,0.12)';cx.lineWidth=2*wSize
+      cx.beginPath();cx.arc(h.x,h.y,hr*1.6,0,Math.PI*2);cx.stroke()
+      const tail=w.seg[w.seg.length-1]
+      if(tail&&fc%2===0){
+        spawnParticles(tail.x,tail.y,col,Math.ceil(wSize),2,.3)
+      }
+    }
+
+    // Eyes
+    const eo=hr*.4,er=Math.max(1,hr*.22)
+    for(const sd of[-1,1]){
+      const ex=h.x+Math.cos(ea+sd*.5)*eo,ey=h.y+Math.sin(ea+sd*.5)*eo
+      cx.fillStyle='#fff';cx.beginPath();cx.arc(ex,ey,er,0,Math.PI*2);cx.fill()
+      cx.fillStyle='#111';cx.beginPath();cx.arc(ex+Math.cos(ea)*er*.3,ey+Math.sin(ea)*er*.3,er*.55,0,Math.PI*2);cx.fill()
+    }
+
+    // Mouth line
+    cx.strokeStyle=dark;cx.lineWidth=1.2;cx.globalAlpha=0.4
+    const ml=hr*0.35,mw=hr*0.12
+    cx.beginPath();cx.moveTo(h.x+Math.cos(ea-Math.PI/2)*mw+Math.cos(ea)*ml,h.y+Math.sin(ea-Math.PI/2)*mw+Math.sin(ea)*ml)
+    cx.lineTo(h.x+Math.cos(ea+Math.PI/2)*mw+Math.cos(ea)*ml,h.y+Math.sin(ea+Math.PI/2)*mw+Math.sin(ea)*ml)
+    cx.stroke();cx.globalAlpha=1
+
+    // Spectate highlight
+    if(spectateW&&w===spectateW){
+      cx.strokeStyle='#ffe044';cx.lineWidth=2;cx.setLineDash([4,4])
+      cx.beginPath();cx.arc(h.x,h.y,hr*2.4,0,Math.PI*2);cx.stroke();cx.setLineDash([])
+    }
+
+    // Effect icons
+    const fxKeys=Object.keys(w.effects)
+    if(cam.zoom>0.04&&fxKeys.length>0){
+      const icons=fxKeys.map(k=>EFFECT_ICON[k]||'✨').join(' ')
+      cx.font='9px sans-serif';cx.textAlign='center';cx.textBaseline='bottom'
+      const cw=cx.measureText(icons).width+8
+      cx.fillStyle='rgba(0,0,0,0.5)';cx.fillRect(h.x-cw/2,h.y-hr-26,cw,12)
+      cx.fillText(icons,h.x,h.y-hr-16)
+    }
+
+    // Personality / label
+    if(cam.zoom>0.04&&w.st>5){
+      const per=getPersonality(w)
+      cx.font='8px sans-serif';cx.textAlign='center';cx.textBaseline='bottom'
+      const txt=per.emoji+' '+per.lbl,cw=cx.measureText(txt).width+8
+      cx.fillStyle='rgba(0,0,0,0.55)';cx.fillRect(h.x-cw/2,h.y-hr-14,cw,12)
+      cx.fillStyle=col;cx.fillText(txt,h.x,h.y-hr-4)
+    }
+  }
+}
+
 function getPersonality(w){
   const s=w.st,k=w.kills,f=w.foodEaten,d=w.distTraveled,m=w.mass
   if(!s||s<3)return{emoji:'🟢',lbl:'Normal'}
-  const rK=k/s,rF=f/s,rD=d/s
+  const rK=k/s,rF=f/s
   if(m>50)return{emoji:'🐉',lbl:'Giant'}
   if(k>5&&m>20)return{emoji:'💀',lbl:'Killer'}
   if(rK>0.08)return{emoji:'⚔️',lbl:'Aggressive'}
   if(w.zones.inEnemy&&m<8)return{emoji:'🏃',lbl:'Fleeing'}
   if(f<1&&s>15)return{emoji:'⭐',lbl:'Starving'}
-  if(rF>0.6)return{emoji:'🍽️',lbl:'Hungry'}
-  if(rD<8&&s>15)return{emoji:'🐌',lbl:'Lazy'}
+  if(rF>0.5)return{emoji:'🍽️',lbl:'Hungry'}
+  if(d/s<4&&s>15)return{emoji:'🐌',lbl:'Lazy'}
   if(k>m/5&&s>15)return{emoji:'🔪',lbl:'Vicious'}
   if(m<3&&s>10)return{emoji:'🐣',lbl:'Tiny'}
   return{emoji:'🟢',lbl:'Normal'}
 }
 
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // WORLD
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 let worms=[],teamWg={},gen=0,aliveCount=0
-let teamEpochs=new Array(N_TEAMS).fill(0)
-let teamModelPools={}  // {team: [Float64Array, ...]} — up to MPT models per team
+let teamEpochs=[],teamModelPools={}
+let evoT=new Set()
+let pendingDeadTeams=new Set()
 
 function rebuildHash(){
   grid.clr()
@@ -571,195 +1035,14 @@ function updateAll(){
   }
   for(const w of worms)w.update()
   aliveCount=worms.filter(w=>w.alive).length
+
+  // Update selected worm info
+  if(selectedWorm&&selectedWorm.alive&&fc%30===0)updateWormInfo()
 }
 
-// ═══════════════════════════════════════════════════════════════
-// RENDER
-// ═══════════════════════════════════════════════════════════════
-function ws(x,y){return{x:(x-cam.x)*cam.zoom+Wc/2,y:(y-cam.y)*cam.zoom+Hc/2}}
-
-function render(){
-  cx.fillStyle='#0a0a15';cx.fillRect(0,0,Wc,Hc)
-
-  // Stars with parallax
-  const sx=cam.x/Wc,sy=cam.y/Hc
-  for(const st of stars){
-    const px=(st.x+cam.x*.3+Wc)*.4,py=(st.y+cam.y*.3+Hc)*.4
-    if(px<0||px>Wc||py<0||py>Hc)continue
-    const twinkle=.6+.4*Math.sin(fc*.03+st.p),a=st.b*twinkle
-    cx.fillStyle=`rgba(255,255,255,${a*.3+.1})`;cx.fillRect(px,py,st.s,st.s)
-  }
-
-  // Zones with pulse
-  const pulse=.7+.3*Math.sin(fc*.02)
-  for(const[t,z]of Object.entries(zones)){
-    const c=ws(z.cx,z.cy),r=z.r*cam.zoom
-    if(c.x<-r-100||c.x>Wc+r+100||c.y<-r-100||c.y>Hc+r+100)continue
-    cx.beginPath();cx.arc(c.x,c.y,r,0,Math.PI*2)
-    cx.fillStyle=TC[t]+'08';cx.fill()
-    cx.strokeStyle=TC[t]+Math.floor(40*pulse).toString(16).padStart(2,'0');cx.lineWidth=2.5;cx.stroke()
-    cx.strokeStyle=TC[t]+'15';cx.lineWidth=6;cx.beginPath();cx.arc(c.x,c.y,r,0,Math.PI*2);cx.stroke()
-    if(r>30){
-      cx.fillStyle='#ffffff20';cx.font='bold 10px sans-serif';cx.textAlign='center'
-      cx.fillText(TN[t],c.x,c.y-5)
-      cx.fillStyle='#ffffff10';cx.font='8px sans-serif'
-      const ep=teamEpochs[parseInt(t)]||0
-      cx.fillText('EPOCH '+ep,c.x,c.y+8)
-    }
-  }
-
-  const gs=1000
-  const minX=Math.max(0,Math.floor((cam.x-Wc/2/cam.zoom)/gs)*gs)
-  const maxX=Math.min(W,Math.ceil((cam.x+Wc/2/cam.zoom)/gs)*gs)
-  const minY=Math.max(0,Math.floor((cam.y-Hc/2/cam.zoom)/gs)*gs)
-  const maxY=Math.min(H,Math.ceil((cam.y+Hc/2/cam.zoom)/gs)*gs)
-  cx.strokeStyle='#111125';cx.lineWidth=.5
-  for(let x=minX;x<=maxX;x+=gs){const s=ws(x,minY),e=ws(x,maxY);cx.beginPath();cx.moveTo(s.x,s.y);cx.lineTo(e.x,e.y);cx.stroke()}
-  for(let y=minY;y<=maxY;y+=gs){const s=ws(minX,y),e=ws(maxX,y);cx.beginPath();cx.moveTo(s.x,s.y);cx.lineTo(e.x,e.y);cx.stroke()}
-
-  const tl=ws(0,0),br=ws(W,H)
-  cx.strokeStyle='#2a2a4a';cx.lineWidth=2;cx.strokeRect(tl.x,tl.y,br.x-tl.x,br.y-tl.y)
-
-  for(const f of foods){
-    const s=ws(f.x,f.y)
-    if(s.x<-10||s.x>Wc+10||s.y<-10||s.y>Hc+10)continue
-    const ft=f.t!==undefined&&f.t<FTYPES.length?FTYPES[f.t]:FTYPES[0]
-    const tier=ft.mass<0?2:f.t<10?0:f.t<20?1:f.t<30?2:f.t<40?3:4
-    const sz=Math.max(1,f.r*cam.zoom*(.7+Math.abs(ft.mass)*1.5))
-    cx.fillStyle=ft.c
-    const shape=f.t%4
-    if(shape===0){cx.beginPath();cx.arc(s.x,s.y,sz,0,Math.PI*2);cx.fill()}
-    else if(shape===1){cx.fillRect(s.x-sz/1.4,s.y-sz/1.4,sz*1.4,sz*1.4)}
-    else if(shape===2){cx.beginPath();cx.moveTo(s.x,s.y-sz*.9);cx.lineTo(s.x+sz*.8,s.y);cx.lineTo(s.x,s.y+sz*.9);cx.lineTo(s.x-sz*.8,s.y);cx.closePath();cx.fill()}
-    else{cx.beginPath();cx.moveTo(s.x,s.y-sz*.9);cx.lineTo(s.x+sz*.7,s.y+sz*.5);cx.lineTo(s.x-sz*.7,s.y+sz*.5);cx.closePath();cx.fill()}
-    if(tier>=4){cx.save();cx.shadowColor=ft.c;cx.shadowBlur=sz*3;cx.beginPath();cx.arc(s.x,s.y,sz,0,Math.PI*2);cx.fill();cx.restore()}
-    else if(tier>=1){cx.strokeStyle=ft.c;cx.globalAlpha=.5;cx.lineWidth=1.5;cx.beginPath();cx.arc(s.x,s.y,sz+1.5,0,Math.PI*2);cx.stroke();cx.globalAlpha=1}
-    if(ft.mass<0){cx.fillStyle='#000a';cx.font=(sz*1.1)+'px sans-serif';cx.textAlign='center';cx.textBaseline='middle';cx.fillText('✕',s.x,s.y+1)}
-    if(ft.effect==='growth'){cx.fillStyle='#fffa';cx.font=(sz*.8)+'px sans-serif';cx.textAlign='center';cx.textBaseline='middle';cx.fillText('✦',s.x,s.y)}
-  }
-
-  drawParticles()
-
-  const spectateW=cam.spectate!==null?worms.find(w=>w.uid===cam.spectate):null
-
-  for(const w of worms){
-    if(!w.alive)continue
-    const h=ws(w.seg[0].x,w.seg[0].y)
-    if(h.x<-300||h.x>Wc+300||h.y<-300||h.y>Hc+300)continue
-    const col='#'+w.c.toString(16).padStart(6,'0')
-    const cr=(w.c>>16)&255,cg=(w.c>>8)&255,cb=w.c&255
-    const dark=`rgb(${Math.floor(cr*.25)},${Math.floor(cg*.25)},${Math.floor(cb*.25)})`
-    const z=w.zones
-    const zMult=z.inEnemy?1.3:z.inTeam?1.15:1
-    for(let i=w.seg.length-1;i>=0;i--){
-      const s=ws(w.seg[i].x,w.seg[i].y),size=(SR-(i/w.seg.length)*2.5)*cam.zoom*zMult
-      const sr=Math.max(1,size)
-      const gr=cx.createRadialGradient(s.x-sr*.3,s.y-sr*.3,0,s.x,s.y,sr)
-      gr.addColorStop(0,col);gr.addColorStop(.5,col);gr.addColorStop(1,dark)
-      cx.fillStyle=gr;cx.beginPath();cx.arc(s.x,s.y,sr,0,Math.PI*2);cx.fill()
-    }
-    const hr=HR*cam.zoom*zMult
-    const hg=cx.createRadialGradient(h.x-hr*.2,h.y-hr*.2,0,h.x,h.y,hr)
-    hg.addColorStop(0,'#fff');hg.addColorStop(.15,col);hg.addColorStop(.7,col);hg.addColorStop(1,dark)
-    cx.fillStyle=hg;cx.beginPath();cx.arc(h.x,h.y,hr,0,Math.PI*2);cx.fill()
-    if(w.sprinting){cx.strokeStyle='#fff3';cx.lineWidth=2;cx.beginPath();cx.arc(h.x,h.y,hr*1.4,0,Math.PI*2);cx.stroke()}
-    const eo=hr*.38,er=Math.max(1,hr*.18)
-    const seg1=w.seg[1]||w.seg[0]
-    const ea=Math.atan2(w.seg[0].y-seg1.y,w.seg[0].x-seg1.x)
-    for(const sd of[-1,1]){
-      const ex=h.x+Math.cos(ea+sd*.55)*eo,ey=h.y+Math.sin(ea+sd*.55)*eo
-      cx.fillStyle='#fff';cx.beginPath();cx.arc(ex,ey,er,0,Math.PI*2);cx.fill()
-      cx.fillStyle='#111';cx.beginPath();cx.arc(ex+Math.cos(ea)*er*.35,ey+Math.sin(ea)*er*.35,er*.45,0,Math.PI*2);cx.fill()
-    }
-    if(spectateW&&w===spectateW){
-      cx.strokeStyle='#ffe044';cx.lineWidth=2;cx.setLineDash([4,4])
-      cx.beginPath();cx.arc(h.x,h.y,hr*2,0,Math.PI*2);cx.stroke();cx.setLineDash([])
-    }
-
-    // Effect icons above worm head
-    const fxKeys=Object.keys(w.effects)
-    if(cam.zoom>0.04&&fxKeys.length>0){
-      const icons=fxKeys.map(k=>EFFECT_ICON[k]||'✨').join(' ')
-      cx.font='10px sans-serif';cx.textAlign='center';cx.textBaseline='bottom'
-      const cw=cx.measureText(icons).width+10
-      cx.fillStyle='rgba(0,0,0,0.5)';cx.fillRect(h.x-cw/2,h.y-hr-28,cw,14)
-      cx.fillText(icons,h.x,h.y-hr-17)
-    }
-    // Personality label
-    if(cam.zoom>0.04&&w.st>5){
-      const per=getPersonality(w)
-      cx.font='9px sans-serif';cx.textAlign='center';cx.textBaseline='bottom'
-      const txt=per.emoji+' '+per.lbl,cw=cx.measureText(txt).width+10
-      cx.fillStyle='rgba(0,0,0,0.55)';cx.fillRect(h.x-cw/2,h.y-hr-15,cw,14)
-      cx.fillStyle=col;cx.fillText(txt,h.x,h.y-hr-4)
-    }
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// LEADERBOARD
-// ═══════════════════════════════════════════════════════════════
-function updateLeaderboard(){
-  const sorted=[...worms].filter(w=>w.alive).sort((a,b)=>b.mass-a.mass).slice(0,20)
-  const lb=document.getElementById('lb')
-  let html='<div class=t>LEADERBOARD</div>'
-  for(let i=0;i<sorted.length;i++){
-    const w=sorted[i],c=TC[w.team]
-    const sel=cam.spectate===w.uid?' sel':''
-    html+=`<div class="r${sel}" data-uid="${w.uid}"><span class=nm style=color:${c}>${i+1}. ${w.name}</span><span class=md>[m${w.modelIdx}]</span><span class=ms>${Math.floor(w.mass)}</span><span style=color:#555;font-size:9px;margin-left:4px>${w.foodEaten}k ${w.kills}p</span></div>`
-  }
-  lb.innerHTML=html
-  lb.querySelectorAll('.r').forEach(el=>{
-    el.addEventListener('click',()=>{
-      const uid=parseInt(el.dataset.uid)
-      cam.spectate=cam.spectate===uid?null:uid
-      const w=worms.find(ww=>ww.uid===uid)
-      if(w&&cam.spectate!==null){cam.tx=w.seg[0].x;cam.ty=w.seg[0].y}
-    })
-  })
-}
-
-// ═══════════════════════════════════════════════════════════════
-// TEAMS PANEL
-// ═══════════════════════════════════════════════════════════════
-function updateTeamPanel(){
-  const body=document.getElementById('tp-body')
-  let html=''
-  for(let t=0;t<N_TEAMS;t++){
-    const tw=worms.filter(w=>w.team===t)
-    const al=tw.filter(w=>w.alive).length,dd=teamDead[t]
-    const maxMass=tw.filter(w=>w.alive).reduce((s,w)=>Math.max(s,w.mass),0).toFixed(0)
-    const ep=teamEpochs[t]||0
-    html+=`<div class=tp-row>
-      <div class=tp-dot style=background:${TC[t]}></div>
-      <div class=tp-name style=color:${TC[t]}>${TN[t]}</div>
-      <div class=tp-ep>E${ep}</div>
-      <div class=tp-stat>${al}/${WPT}</div>
-      <div class=tp-stat>${maxMass}</div>
-    </div>`
-  }
-  body.innerHTML=html
-}
-function updateEpochBar(){
-  const eb=document.getElementById('epoch-bar')
-  let h=''
-  for(let t=0;t<N_TEAMS;t++){
-    const tw=worms.filter(w=>w.team===t),al=tw.filter(w=>w.alive).length
-    const dotCol=al>0?TC[t]:'#444'
-    h+=`<span class=eb-item><span class=eb-dot style=background:${dotCol}></span><span class=eb-num style=color:${al>0?'#48f':'#555'}>${teamEpochs[t]||0}</span></span>`
-  }
-  eb.innerHTML=h
-}
-document.getElementById('team-btn').addEventListener('click',()=>{
-  document.getElementById('team-panel').classList.toggle('open')
-  document.getElementById('team-btn').textContent=
-    document.getElementById('team-panel').classList.contains('open')?'TEAMS <':'TEAMS >'
-})
-
-// ═══════════════════════════════════════════════════════════════
-// SERVER
-// ═══════════════════════════════════════════════════════════════
-let evoT=new Set()
+// ═══════════════════════════════════════════════════════════════════
+// SERVER COMMUNICATION
+// ═══════════════════════════════════════════════════════════════════
 
 function getModelFromPool(team,pool){
   if(!pool||!pool.length)return null
@@ -776,12 +1059,23 @@ function respawnTeam(team){
   }
 }
 
+function eliminateTeam(team){
+  pendingDeadTeams.add(team)
+  needsEvo=true
+  // Reset synchronously, so a wiped-out team never waits for the server.
+  respawnTeam(team)
+  sendStats()
+}
+
 async function initFromServer(){
   try{
-    const res=await fetch('/config');if(!res.ok)throw new Error('no server')
-    const cfg=await res.json()
-    // Apply config from server
-    W=cfg.worldSize;H=cfg.worldSize;CELL=500;GRID=W/CELL
+    const [cfgRes,zRes,pRes,obsRes]=await Promise.all([
+      fetch('/config'),fetch('/zones'),fetch('/pools'),fetch('/obstacles')
+    ])
+
+    const cfg=await cfgRes.json()
+
+    W=cfg.worldSize;H=cfg.worldSize;CELL=W/20;GRID=Math.ceil(W/CELL)
     N_HIDDEN1=cfg.nHidden1||N_HIDDEN1;N_HIDDEN2=cfg.nHidden2||N_HIDDEN2;N_HIDDEN3=cfg.nHidden3||N_HIDDEN3
     N_INPUT=cfg.nInput||N_INPUT;N_OUTPUT=cfg.nOutput||N_OUTPUT
     WC=cfg.weightCount||WC
@@ -792,38 +1086,63 @@ async function initFromServer(){
     ZR=cfg.zoneRadius;ZD=cfg.zoneDamage||ZD
     TN=cfg.teamNames;TC=cfg.teamColors
     CN=TC.map(c=>parseInt(c.slice(1),16))
-    document.getElementById('infoMap').textContent=W
-    // Camera default relative to world
-    cam.tzoom=Math.min(.2,30000/W*0.12)
-    // Spawn food AFTER config applied
-    // Game mode
-    if(cfg.gameMode)gameMode=cfg.gameMode
-    document.getElementById('mode-lbl').textContent=gameMode.toUpperCase()
+    gameMode=cfg.gameMode||gameMode
+    OBSTACLES_ENABLED=cfg.obstaclesEnabled!==false
 
-    // Re-init team tracking arrays to match actual N_TEAMS
+    document.getElementById('infoMap').textContent=`${W}x${W}`
+    document.getElementById('mode-lbl').textContent=gameMode.toUpperCase()
+    document.getElementById('hMode').textContent=gameMode.toUpperCase()
+
+    cam.tzoom=Math.min(.2,30000/W*0.12)
+    cam.tx=W/2;cam.ty=H/2
+
     teamDead=new Array(N_TEAMS).fill(0)
     teamEpochs=new Array(N_TEAMS).fill(0)
     wormIdCounter=0
 
     clearFood();spawnFood(Math.floor(FOOD_COUNT*0.5))
 
-    const zRes=await fetch('/zones');if(zRes.ok){const d=await zRes.json();if(Object.keys(d).length)zones=d}
-    const wRes=await fetch('/weights');if(wRes.ok){
-      const d=await wRes.json()
-      for(const[t,w]of Object.entries(d)){
-        teamWg[t]=new Float64Array(w)
-        teamModelPools[t]=[new Float64Array(w)]
+    // Zones
+    if(zRes.ok){const d=await zRes.json();if(Object.keys(d).length)zones=d}
+    if(!Object.keys(zones).length)genZones()
+
+    // Pools (all models per team)
+    if(pRes.ok){
+      const d=await pRes.json()
+      for(const[t,data]of Object.entries(d)){
+        teamModelPools[t]=data.models.map(w=>new Float64Array(w))
+        teamEpochs[t]=data.epoch||0
+        if(data.fitness)modelFitness[t]=data.fitness
+        if(data.fitness_history)modelFitnessHistory[t]=data.fitness_history
       }
     }
-    for(let t=0;t<N_TEAMS;t++){if(!teamWg[t]){teamWg[t]=rW();teamModelPools[t]=[rW()]}}
+
+    // Fill missing teams with random pools
+    for(let t=0;t<N_TEAMS;t++){
+      if(!teamModelPools[t]){
+        teamModelPools[t]=Array.from({length:MPT},()=>rW())
+      }
+    }
+
+    // Obstacles
+    if(OBSTACLES_ENABLED&&obsRes.ok){
+      const d=await obsRes.json()
+      obstacles=d.obstacles||[]
+    }
+
     createWorms()
   }catch(e){
+    console.error('Server init failed, running standalone:',e)
     genZones()
-    for(let t=0;t<N_TEAMS;t++){teamWg[t]=rW();teamModelPools[t]=[rW()]}
-    clearFood();spawnFood(Math.floor(FOOD_COUNT*0.5))
+    N_TEAMS=6;WPT=8;MPT=15
+    TN=['Alpha','Shadow','Viper','Cobra','Storm','Blaze']
+    TC=['#ff4455','#ff8822','#ffdd33','#44ee55','#00eebb','#44aaff']
+    CN=TC.map(c=>parseInt(c.slice(1),16))
     teamDead=new Array(N_TEAMS).fill(0)
     teamEpochs=new Array(N_TEAMS).fill(0)
     wormIdCounter=0
+    clearFood();spawnFood(Math.floor(4000*0.5))
+    for(let t=0;t<N_TEAMS;t++)teamModelPools[t]=Array.from({length:MPT},()=>rW())
     createWorms()
   }
 }
@@ -831,7 +1150,7 @@ async function initFromServer(){
 function createWorms(){
   worms=[]
   for(let t=0;t<N_TEAMS;t++){
-    const pool=teamModelPools[t]||[teamWg[t]]
+    const pool=teamModelPools[t]||Array.from({length:MPT},()=>rW())
     for(let i=0;i<WPT;i++){
       const wg=pool[Math.floor(Math.random()*pool.length)]
       const mi=Math.floor(Math.random()*Math.max(1,pool.length))
@@ -840,65 +1159,126 @@ function createWorms(){
   }
 }
 
+let sendingStats=false
+
 async function sendStats(){
-  if(evoT.size>0)return
-  const alive=worms.filter(w=>w.alive).map(w=>({team:w.team,id:w.id,modelId:w.modelIdx,mass:w.mass,survivalTime:w.st,kills:w.kills,foodEaten:w.foodEaten,distanceTraveled:w.distTraveled}))
-  const deadTeams=[]
-  for(let t=0;t<N_TEAMS;t++)if(teamDead[t]>=WPT)deadTeams.push(t)
-  const allStats=[...alive,...deadWormsStats];deadWormsStats=[]
+  if(sendingStats)return
+  const deadTeams=[...pendingDeadTeams]
+  if(deadTeams.length===0)return
+  sendingStats=true
+  for(const team of deadTeams)pendingDeadTeams.delete(team)
+  const deadStats=[...deadWormsStats];deadWormsStats=[]
   try{
-    const res=await fetch('/stats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({alive:allStats,deadTeams,totalWorms:N_TEAMS*WPT})})
+    const res=await fetch('/stats',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deadStats,deadTeams,totalWorms:N_TEAMS*WPT})})
     if(res.ok){
       setServerStatus(true)
       const d=await res.json()
+      const appliedTeams=new Set()
       for(const ev of d.evolutions||[]){
         const team=ev.team
         evoT.add(team)
-        if(ev.models&&ev.models.length){
-          teamModelPools[team]=ev.models.map(m=>new Float64Array(m.weights))
-          teamEpochs[team]=ev.epoch||0
-        } else if(ev.weights){
-          teamModelPools[team]=[new Float64Array(ev.weights)]
+        try{
+          if(ev.models&&ev.models.length){
+            teamModelPools[team]=ev.models.map(m=>new Float64Array(m.weights))
+            teamEpochs[team]=ev.epoch||0
+          } else if(ev.weights){
+            teamModelPools[team]=[new Float64Array(ev.weights)]
+          }
+          respawnTeam(team)
+          appliedTeams.add(team)
+        }catch(err){
+          console.error('Respawn failed for team',team,err)
+          teamModelPools[team]=Array.from({length:MPT},()=>rW())
+          teamEpochs[team]=(teamEpochs[team]||0)+1
+          respawnTeam(team)
+        }finally{
+          evoT.delete(team)
         }
-        respawnTeam(team)
-        evoT.delete(team)
+      }
+      for(const t of deadTeams){
+        if(!appliedTeams.has(t)){
+          teamModelPools[t]=Array.from({length:MPT},()=>rW())
+          teamEpochs[t]=(teamEpochs[t]||0)+1
+          respawnTeam(t)
+          evoT.delete(t)
+        }
       }
       if(d.generation!==undefined){gen=d.generation;document.getElementById('hGen').textContent=gen}
       if(d.teamEpochs){
         for(const[t,ep]of Object.entries(d.teamEpochs))teamEpochs[parseInt(t)]=ep
       }
+      if(d.poolInfo){
+        for(const[t,info]of Object.entries(d.poolInfo)){
+          const ti=parseInt(t)
+          if(info.fitness)modelFitness[ti]=info.fitness
+          if(info.fitness_history)modelFitnessHistory[ti]=info.fitness_history
+        }
+      }
     }
   }catch(e){
     setServerStatus(false)
-    if(deadTeams.length===0)return
-    for(const t of deadTeams){
-      if(!evoT.has(t)){
-        teamModelPools[t]=Array.from({length:MPT},()=>rW())
-        teamEpochs[t]=(teamEpochs[t]||0)+1
-        respawnTeam(t)
-      }
-    }
   }
-  needsEvo=false
-  for(let t=0;t<N_TEAMS;t++)if(teamDead[t]>=WPT){needsEvo=true;break}
+  sendingStats=false
+  needsEvo=pendingDeadTeams.size>0
+  if(pendingDeadTeams.size)sendStats()
 }
 
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// LEADERBOARD & UI
+// ═══════════════════════════════════════════════════════════════════
+function updateLeaderboard(){
+  const sorted=[...worms].filter(w=>w.alive).sort((a,b)=>b.mass-a.mass).slice(0,20)
+  const lb=document.getElementById('lb')
+  let html='<div class=t>LEADERBOARD</div>'
+  for(let i=0;i<sorted.length;i++){
+    const w=sorted[i],c=TC[w.team]
+    const sel=cam.spectate===w.uid?' sel':''
+    html+=`<div class="r${sel}" data-uid="${w.uid}">
+      <span class=nm style=color:${c}>${i+1}. ${w.name}</span>
+      <span class=md>[m${w.modelIdx}]</span>
+      <span class=sc>${Math.floor(w.score)}</span>
+      <span class=ms>${Math.floor(w.mass)}</span>
+    </div>`
+  }
+  lb.innerHTML=html
+  lb.querySelectorAll('.r').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const uid=parseInt(el.dataset.uid)
+      cam.spectate=cam.spectate===uid?null:uid
+      const w=worms.find(ww=>ww.uid===uid)
+      if(w&&cam.spectate!==null){cam.tx=w.seg[0].x;cam.ty=w.seg[0].y;showWormInfo(w)}
+    })
+  })
+}
+
+function updateEpochBar(){
+  const eb=document.getElementById('epoch-bar')
+  let h='<div class=eb-title>EPOCHS</div>'
+  for(let t=0;t<N_TEAMS;t++){
+    const tw=worms.filter(w=>w.team===t),al=tw.filter(w=>w.alive).length
+    const dotCol=al>0?(TC[t]||'#444'):'#444'
+    h+=`<div class=eb-item><span class=eb-dot style=background:${dotCol}></span><span class=eb-name style=color:${TC[t]||'#888'}>${TN[t]||'T'+t}</span><span class=eb-num style=color:${al>0?'#48f':'#555'}>E${teamEpochs[t]||0}</span><span class=eb-alive>${al}/${WPT}</span></div>`
+  }
+  eb.innerHTML=h
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // GAME LOOP
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 let fc=0
 
 initFromServer().then(()=>{
-  if(!Object.keys(zones).length)genZones()
-  if(worms.length===0){for(let t=0;t<N_TEAMS;t++){if(!teamWg[t])teamWg[t]=rW();if(!teamModelPools[t])teamModelPools[t]=[rW()]};createWorms()}
+  if(worms.length===0){
+    for(let t=0;t<N_TEAMS;t++){
+      if(!teamModelPools[t])teamModelPools[t]=Array.from({length:MPT},()=>rW())
+    }
+    createWorms()
+  }
   document.getElementById('hAlive').textContent=worms.filter(w=>w.alive).length
 
   function loop(){
     requestAnimationFrame(loop)
     fc++
-
-    // Player worm auto-spawn
-    if(gameMode==='team_players'&&(!playerWorm||!playerWorm.alive))spawnPlayerWorm()
 
     if(!paused){
       for(let s=0;s<speedMul;s++){
@@ -913,7 +1293,7 @@ initFromServer().then(()=>{
     if(cam.spectate!==null&&!drag.d){
       const spec=worms.find(w=>w.uid===cam.spectate)
       if(spec&&spec.alive){cam.tx=spec.seg[0].x;cam.ty=spec.seg[0].y}
-      else{cam.spectate=null}
+      else{cam.spectate=null;hideWormInfo()}
     }
 
     const snap=.08
@@ -923,26 +1303,52 @@ initFromServer().then(()=>{
 
     render()
 
-    if(fc%20===0){updateLeaderboard();updateTeamPanel();updateEpochBar()}
-    if(fc%60===0||needsEvo)sendStats()
+    if(fc%10===0){updateLeaderboard();updateEpochBar()}
+    if(needsEvo)sendStats()
+    if(fc%20===0&&selectedWorm&&selectedWorm.alive)updateWormInfo()
   }
 
   loop()
 })
 
-// FITNESS GRAPH
-let fitData=[];const fitCanv=document.getElementById('fitcanv');const fitCtx=fitCanv.getContext('2d');
-function drawGraph(){const w=fitCanv.width,h=fitCanv.height;fitCtx.clearRect(0,0,w,h);if(!fitData.length){fitCtx.fillStyle='#444';fitCtx.font='12px monospace';fitCtx.textAlign='center';fitCtx.fillText('Waiting for data...',w/2,h/2);return}
-let d=fitData;if(d.length>2000)d=d.slice(-2000);const vs=d.map(x=>typeof x==='object'?x.bestFitness||x.fitness||0:typeof x==='number'?x:0).filter(x=>x!==null);
-if(!vs.length)return;const mv=Math.max(...vs,1),mn=Math.min(...vs,0),rg=mv-mn||1,pd=10,pw=w-pd*2,ph=h-pd*2;
-fitCtx.fillStyle='rgba(68,170,255,0.05)';fitCtx.fillRect(pd,0,pw,ph);
-fitCtx.strokeStyle='rgba(68,68,88,0.3)';fitCtx.lineWidth=0.5;for(let i=0;i<4;i++){const y=pd+(ph/4)*i;fitCtx.beginPath();fitCtx.moveTo(pd,y);fitCtx.lineTo(pd+pw,y);fitCtx.stroke()}
-fitCtx.beginPath();for(let i=0;i<vs.length;i++){const x=pd+(i/(vs.length-1||1))*pw,y=pd+ph-(1-(vs[i]-mn)/rg)*ph;i===0?fitCtx.moveTo(x,y):fitCtx.lineTo(x,y)}
-fitCtx.strokeStyle='#44aaff';fitCtx.lineWidth=1.5;fitCtx.stroke();
-fitCtx.fillStyle='rgba(68,170,255,0.1)';fitCtx.lineTo(pd+pw,pd+ph);fitCtx.lineTo(pd,pd+ph);fitCtx.closePath();fitCtx.fill();
-fitCtx.fillStyle='#555';fitCtx.font='9px monospace';fitCtx.textAlign='left';fitCtx.fillText('Gen',pd+2,pd+10);fitCtx.textAlign='right';fitCtx.fillText(mv.toFixed(0),w-pd,pd+10);fitCtx.fillText(mn.toFixed(0),w-pd,pd+ph);
-if(vs.length>1){const lt=vs[vs.length-1],pr=vs[vs.length-2],pc=pr!==0?((lt-pr)/Math.abs(pr)*100).toFixed(1):'+inf';document.getElementById('fitlast').textContent=lt.toFixed(1)+' ('+pc+'%)'}
+// Model fitness tracking
+let modelFitness={}
+let modelFitnessHistory={}
+
+async function resetAll(){
+  if(!confirm('Reset all weights, stats, and epochs? This cannot be undone.'))return
+  try{
+    const r=await fetch('/reset',{method:'POST'})
+    if(r.ok)location.reload()
+    else alert('Reset failed')
+  }catch(e){
+    alert('Reset failed: '+e.message)
+  }
 }
-setInterval(async()=>{try{const r=await fetch('/fitness_history');if(r.ok){const d=await r.json();if(d.history&&Array.isArray(d.history)){fitData=d.history;drawGraph()}}}catch(e){}},5000);</script>
+
+// FITNESS GRAPH
+let fitData=[]
+const fitCanv=document.getElementById('fitcanv'),fitCtx=fitCanv.getContext('2d')
+function drawGraph(){
+  const w=fitCanv.width,h=fitCanv.height
+  fitCtx.clearRect(0,0,w,h)
+  if(!fitData.length){fitCtx.fillStyle='#444';fitCtx.font='10px monospace';fitCtx.textAlign='center';fitCtx.fillText('Waiting...',w/2,h/2-10);return}
+  let d=fitData
+  if(d.length>2000)d=d.slice(-2000)
+  const vs=d.map(x=>typeof x==='object'?x.bestFitness||x.fitness||0:typeof x==='number'?x:0).filter(x=>x!==null)
+  if(!vs.length)return
+  const mv=Math.max(...vs,1),mn=Math.min(...vs,0),rg=mv-mn||1,pd=10,pw=w-pd*2,ph=h-pd*2
+  fitCtx.fillStyle='rgba(68,170,255,0.04)';fitCtx.fillRect(pd,0,pw,ph)
+  fitCtx.strokeStyle='rgba(68,68,88,0.2)';fitCtx.lineWidth=0.5
+  for(let i=0;i<3;i++){const y=pd+(ph/3)*i;fitCtx.beginPath();fitCtx.moveTo(pd,y);fitCtx.lineTo(pd+pw,y);fitCtx.stroke()}
+  fitCtx.beginPath()
+  for(let i=0;i<vs.length;i++){const x=pd+(i/(vs.length-1||1))*pw,y=pd+ph-(1-(vs[i]-mn)/rg)*ph;i===0?fitCtx.moveTo(x,y):fitCtx.lineTo(x,y)}
+  fitCtx.strokeStyle='#44aaff';fitCtx.lineWidth=1.5;fitCtx.stroke()
+  fitCtx.fillStyle='rgba(68,170,255,0.08)';fitCtx.lineTo(pd+pw,pd+ph);fitCtx.lineTo(pd,pd+ph);fitCtx.closePath();fitCtx.fill()
+  fitCtx.fillStyle='#555';fitCtx.font='8px monospace';fitCtx.textAlign='left';fitCtx.fillText('Gen',pd+2,pd+8);fitCtx.textAlign='right';fitCtx.fillText(mv.toFixed(0),w-pd,pd+8);fitCtx.fillText(mn.toFixed(0),w-pd,pd+ph-2)
+  if(vs.length>1){const lt=vs[vs.length-1],pr=vs[vs.length-2],pc=pr!==0?((lt-pr)/Math.abs(pr)*100).toFixed(1):'+inf';document.getElementById('fitlast').textContent=lt.toFixed(0)+' ('+pc+'%)'}
+}
+setInterval(async()=>{try{const r=await fetch('/fitness_history');if(r.ok){const d=await r.json();if(d.history&&Array.isArray(d.history)){fitData=d.history;drawGraph()}}}catch(e){}},5000)
+</script>
 </body>
 </html>

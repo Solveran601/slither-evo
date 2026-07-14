@@ -46,7 +46,17 @@ from pathlib import Path
 from collections import defaultdict, Counter, deque
 from typing import List, Dict, Optional, Tuple, Union, Callable
 
+import config
+# Import all config names into module namespace for backward compat
+# but keep reference to config module for dynamic reloading
 from config import *
+_CONFIG_NAMES = [k for k in dir(config) if k.isupper()]
+
+def _sync_config():
+    """Re-sync module-level config values from config module (for mode switching)."""
+    for name in _CONFIG_NAMES:
+        if hasattr(config, name):
+            globals()[name] = getattr(config, name)
 
 # ═══════════════════════════════════════════════════════════════════
 # SECTION 1: NEURAL NETWORK
@@ -146,7 +156,9 @@ class NeuralNetwork:
 
     @staticmethod
     def random() -> 'NeuralNetwork':
-        return NeuralNetwork()
+        nn = NeuralNetwork()
+        nn.weights = [random.uniform(-1.0, 1.0) for _ in range(WEIGHT_COUNT)]
+        return nn
 
     def weight_stats(self) -> Dict[str, float]:
         """Compute basic statistics of this network's weights."""
@@ -274,6 +286,10 @@ class ModelPool:
             result.append(avg_f)
         return result
 
+    def get_all_fitness(self) -> Dict[int, float]:
+        """Return {model_idx: fitness} for all models."""
+        return {i: m.fitness for i, m in enumerate(self.models)}
+
     def record_fitness(self, model_idx: int, fitness: float) -> None:
         """Record a fitness observation for a specific model."""
         if model_idx not in self.fitness_records:
@@ -366,7 +382,6 @@ class ModelPool:
 
         # save each model
         for i, nn in enumerate(self.models):
-            nn.epoch_created = self.epoch
             nn.model_id = i
             nn.team = self.team
             path = base / f'model_{i:02d}.json'
@@ -435,42 +450,51 @@ class WeightManager:
     Manages all team model pools on disk.
     Directory structure:
       weights/
-        TeamName/
-          meta.json       — team metadata (epoch, color, etc.)
-          model_00.json   — weights + metadata for model 0
-          model_01.json   — ...
-          ...
-          model_14.json
-        Shadow/
-          ...
-        ...
+        <mode_dir>/        (e.g. 'team' or 'ffa')
+          TeamName/
+            meta.json
+            model_00.json
+            ...
     """
 
-    def __init__(self, base_dir: str = 'weights'):
+    def __init__(self, base_dir: str = 'weights', mode_dir: str = ''):
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(exist_ok=True)
+        self.mode_dir = mode_dir or GAME_MODE
         self.pools: Dict[int, ModelPool] = {}
         self.initialized = False
 
-    def init_teams(self) -> None:
-        """Create random pools for all teams."""
+    @property
+    def mode_path(self) -> Path:
+        return self.base_dir / self.mode_dir
+
+    def init_random_pools(self) -> None:
+        """Create random pools for all teams without loading from disk."""
+        self.pools = {}
         for t in range(N_TEAMS):
             pool = ModelPool(t, TEAM_NAMES[t], TEAM_COLORS[t])
             pool.init_random()
-            pool.save(self.base_dir)
             self.pools[t] = pool
+        self.save_all()
         self.initialized = True
+
+    def init_teams(self) -> None:
+        """Create random pools for all teams (backward compat)."""
+        self.init_random_pools()
 
     def load_all(self) -> None:
         """Load all team pools from disk, creating missing ones."""
+        mode_path = self.mode_path
+        mode_path.mkdir(parents=True, exist_ok=True)
+
         for t in range(N_TEAMS):
-            pool = ModelPool.load(t, self.base_dir)
+            pool = ModelPool.load(t, mode_path)
             if pool is None:
                 name = TEAM_NAMES[t] if t < len(TEAM_NAMES) else f'Team-{t}'
                 color = TEAM_COLORS[t] if t < len(TEAM_COLORS) else '#ffffff'
                 pool = ModelPool(t, name, color)
                 pool.init_random()
-                pool.save(self.base_dir)
+                pool.save(mode_path)
             self.pools[t] = pool
         self.initialized = True
 
@@ -486,11 +510,13 @@ class WeightManager:
     def save_pool(self, team: int) -> None:
         pool = self.pools.get(team)
         if pool:
-            pool.save(self.base_dir)
+            pool.save(self.mode_path)
 
     def save_all(self) -> None:
+        mode_path = self.mode_path
+        mode_path.mkdir(parents=True, exist_ok=True)
         for pool in self.pools.values():
-            pool.save(self.base_dir)
+            pool.save(mode_path)
 
     def get_all_weights(self) -> Dict[int, List[float]]:
         """Return {team: best_model_weights} for backward compat."""
@@ -506,6 +532,20 @@ class WeightManager:
 
     def get_team_epochs(self) -> Dict[int, int]:
         return {t: pool.epoch for t, pool in self.pools.items()}
+
+    def get_all_models_for_team(self, team: int) -> List[List[float]]:
+        """Return ALL model weights for a team (for the frontend pool)."""
+        pool = self.pools.get(team)
+        if not pool:
+            return []
+        return [m.to_list() for m in pool.models]
+
+    def reset_for_mode(self, mode: str) -> None:
+        """Reset all pools for a new game mode."""
+        self.mode_dir = mode
+        self.pools = {}
+        self.initialized = False
+        self.init_random_pools()
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -571,74 +611,149 @@ class ZoneManager:
 
 class FitnessEvaluator:
     """
-    Computes fitness for individual worms with RL-shaped rewards:
-    - Survival time (base reward per tick)
-    - PvP kills (bonus per kill)
-    - Mass / size (reward for growth)
-    - Food eaten (explicit food reward)
-    - Activity (distance traveled bonus)
-    - Inactivity penalty (lazy worms get punished)
-    - Starvation penalty (worms that don't eat get negative pressure)
+    ======================================================================
+    MERIT-BASED FITNESS SYSTEM (no free points)
+    ======================================================================
+
+    CORE PRINCIPLE: Worms EARN their fitness. Nothing is free.
+
+    REWARDS (only earned through action):
+      +15    per food eaten           (primary — seek food!)
+      +4     per unit mass gained     (growth = eating well)
+      +80    per kill                 (PvP — high risk, high reward)
+      +0.5   per 100px traveled       (exploration, no cap)
+      +8     per 10s in enemy zone    (territory aggression)
+
+    PENALTIES (subtractive, applied BEFORE multiplier):
+      -3     per second alive with NO food eaten yet
+             → only applies for first 10s (grace period)
+      -5     per missing food unit when starving
+             → expected = survival_time / 20 (must eat every 20s)
+      -(mass_lost * 4)   if dropped >50% from peak mass
+
+    MULTIPLIER starts at 1.0:
+      ×0.01  if died in first 3s      (instant death — useless)
+      ×0.05  if died from wall        (wall collision — avoidable)
+      ×0.02  if traveled < 50px after 20s (completely frozen)
+      ×0.10  if never ate anything    (peak mass < 1.5)
+
+    BONUS MULTIPLIERS (on top of multiplier):
+      ×1.4   if mass > 30             (big worm)
+      ×1.3   if killed >= 2 enemies   (predator)
+      ×1.2   if food_eaten > 40       (feeder)
+      ×1.1   if survived > 90s        (veteran)
+
+    PHILOSOPHY:
+      A worm that eats 5 food, gains 3 mass, lives 60s, travels 3000px:
+        food: 5*15 = 75
+        growth: (4-1)*4 = 12  (start mass 1, end mass 4)
+        explore: 3000/100*0.5 = 15
+        starvation: expected=60/20=3, deficit=0 → 0
+        total raw: 102
+      No bonuses/penalties → fitness = 102
+
+      A worm that eats 0 food, lives 60s, travels 500px:
+        food: 0
+        growth: 0
+        explore: 500/100*0.5 = 2.5
+        starvation: expected=60/20=3, deficit=3, penalty=3*5=15
+        grace: first 10s penalty = 10*3 = 30
+        raw: 2.5 - 15 - 30 = 0 (clamped)
+        never_ate: ×0.10
+        fitness = 0
+
+      The second worm gets ZERO. This forces evolution to prioritize
+      food-seeking above all else. Survival alone is worthless.
     """
 
     def __init__(self):
-        self.survival_weight = FITNESS_SURVIVAL
-        self.pvp_weight = FITNESS_PVP
-        self.size_weight = FITNESS_SIZE
-        self.food_reward = FOOD_REWARD
-        self.activity_factor = ACTIVITY_BONUS_FACTOR
-        self.inactivity_threshold = INACTIVITY_THRESHOLD
-        self.inactivity_penalty = INACTIVITY_PENALTY
-        self.starvation_penalty = STARVATION_PENALTY
-        self.starvation_divisor = STARVATION_DIVISOR
-        self.max_reference_mass = 50.0
-        self.kill_value = 10.0  # reward per kill before weight
+        self.food_reward = 4.0
+        self.mass_gain_per_unit = 1.5
+        self.kill_reward = 20.0
+        self.exploration_per_100px = 0.15
+        self.zone_aggression_per_10s = 2.0
+
+        self.big_worm_threshold = 30.0
+        self.big_worm_bonus = 1.15
+        self.predator_kill_threshold = 2
+        self.predator_bonus = 1.1
+        self.feeder_food_threshold = 40
+        self.feeder_bonus = 1.05
+        self.veteran_threshold = 90.0
+        self.veteran_bonus = 1.03
+
+        self.instant_death_threshold = 3.0
+        self.instant_death_penalty = 0.005
+        self.wall_death_penalty = 0.03
+        self.frozen_distance_threshold = 50
+        self.frozen_time_threshold = 20.0
+        self.frozen_penalty = 0.01
+        self.never_ate_penalty = 0.02
+
+        self.starvation_divisor = 14
+        self.starvation_penalty_per_unit = 12.0
+        self.mass_waste_penalty = 8.0
+
+        self.grace_period = 8.0
+        self.grace_penalty_per_sec = 6.0
+        self.sprint_penalty_per_sec = 4.0
 
     def compute(self, mass: float, survival_time: float, kills: int,
                 food_eaten: int = 0, distance: float = 0.0,
-                extra_bonus: float = 0.0) -> float:
+                extra_bonus: float = 0.0, wall_death: bool = False,
+                peak_mass: float = 0.0, zone_time: float = 0.0,
+                sprint_time: float = 0.0) -> float:
         """
-        Compute fitness with RL shaping.
-
-        Args:
-            mass: Current mass of the worm
-            survival_time: How long it lived (seconds)
-            kills: Number of other worms killed
-            food_eaten: Number of food items eaten
-            distance: Total pixels traveled
-            extra_bonus: Additional bonus (e.g., zone defense)
-
-        Returns:
-            float: Fitness value
+        Compute fitness — only positive if the worm actually did something.
         """
-        surv = survival_time * self.survival_weight
-        pvp = kills * self.kill_value * self.pvp_weight
-        size = (mass / self.max_reference_mass) * 100.0 * self.size_weight
-        food_r = food_eaten * self.food_reward
+        food_score = food_eaten * self.food_reward
+        mass_gained = max(0.0, mass - 1.0)
+        growth_score = mass_gained * self.mass_gain_per_unit
+        kill_score = kills * self.kill_reward
+        explore_score = distance / 100.0 * self.exploration_per_100px
+        zone_score = (zone_time / 10.0) * self.zone_aggression_per_10s
 
-        # Activity bonus: cap at 20k pixels → 20 * factor
-        activity_b = min(distance / 1000.0, 20.0) * self.activity_factor
+        raw = food_score + growth_score + kill_score + explore_score + zone_score + extra_bonus
+        raw -= sprint_time * self.sprint_penalty_per_sec
 
-        # Inactivity penalty: smooth sigmoid-like transition
-        if survival_time > 5.0 and distance < self.inactivity_threshold:
-            # ratio 0..1 where 0 = fully inactive, 1 = meets threshold
-            ratio = distance / max(self.inactivity_threshold, 1.0)
-            penalty = self.inactivity_penalty + (1.0 - self.inactivity_penalty) * ratio
-        else:
-            penalty = 1.0
+        grace_penalty = max(0.0, self.grace_period - survival_time) * self.grace_penalty_per_sec
+        raw -= grace_penalty
 
-        raw = surv + pvp + size + food_r + activity_b + extra_bonus
-
-        # Starvation penalty: if worm didn't eat enough for its survival time
-        expected_food = survival_time / self.starvation_divisor
+        expected_food = survival_time / self.starvation_divisor if survival_time > self.grace_period else 0
         if food_eaten < expected_food:
             deficit = expected_food - food_eaten
-            raw -= deficit * self.starvation_penalty
+            raw -= deficit * self.starvation_penalty_per_unit
 
-        return raw * penalty
+        if peak_mass > 5.0 and mass < peak_mass * 0.5:
+            mass_lost = peak_mass - mass
+            raw -= mass_lost * self.mass_waste_penalty
+
+        raw = max(0.0, raw)
+
+        penalty = 1.0
+        if survival_time < self.instant_death_threshold:
+            penalty *= self.instant_death_penalty
+        if wall_death:
+            penalty *= self.wall_death_penalty
+        if survival_time > self.frozen_time_threshold and distance < self.frozen_distance_threshold:
+            penalty *= self.frozen_penalty
+        peak = max(peak_mass, mass)
+        if peak < 1.5:
+            penalty *= self.never_ate_penalty
+
+        bonus = 1.0
+        if mass > self.big_worm_threshold:
+            bonus *= self.big_worm_bonus
+        if kills >= self.predator_kill_threshold:
+            bonus *= self.predator_bonus
+        if food_eaten > self.feeder_food_threshold:
+            bonus *= self.feeder_bonus
+        if survival_time > self.veteran_threshold:
+            bonus *= self.veteran_bonus
+
+        return raw * penalty * bonus
 
     def compute_from_stats(self, worm_stats: Dict) -> float:
-        """Convenience: compute fitness from a stats dict."""
         return self.compute(
             mass=worm_stats.get('mass', 0),
             survival_time=worm_stats.get('survivalTime', 0),
@@ -646,15 +761,17 @@ class FitnessEvaluator:
             food_eaten=worm_stats.get('foodEaten', 0),
             distance=worm_stats.get('distanceTraveled', 0),
             extra_bonus=worm_stats.get('bonus', 0),
+            wall_death=worm_stats.get('wallDeath', False),
+            peak_mass=worm_stats.get('peakMass', 0),
+            zone_time=worm_stats.get('zoneTime', 0),
+            sprint_time=worm_stats.get('sprintTime', 0),
         )
 
     def normalized(self, mass: float, survival_time: float, kills: int,
                    food_eaten: int = 0, distance: float = 0.0) -> float:
-        """Compute fitness normalized to [0, 100] scale."""
         raw = self.compute(mass, survival_time, kills, food_eaten, distance)
-        # rough normalization matching current weights
-        expected_max = (300 * 0.35) + (10 * 10 * 0.25) + (1.0 * 100 * 0.30) + (500 * 4.0) + (20 * 0.3)
-        return min(100.0, (raw / max(expected_max, 1)) * 100.0)
+        expected_good = 10 * self.food_reward + 8 * self.mass_gain_per_unit + 5000 / 100 * self.exploration_per_100px
+        return min(100.0, (raw / max(expected_good, 1)) * 100.0)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1175,25 +1292,25 @@ class TeamEvolver:
 
     def __init__(self,
                  pool_size: int = MODELS_PER_TEAM,
-                 elite_count: int = 2,
-                 tournament_size: int = 3,
-                 crossover_rate: float = 0.7,
+                 elite_count: int = 3,           # keep top 3 elites
+                 tournament_size: int = 4,       # stronger selection pressure
+                 crossover_rate: float = 0.6,    # more mutation, less crossover
                  crossover_method: str = 'uniform',
-                 mutation_rate: float = 0.12,
-                 mutation_amount: float = 0.8,
+                 mutation_rate: float = 0.08,    # lower for 2468 weights (was 0.12 for 1006)
+                 mutation_amount: float = 0.5,   # gentler mutations (was 0.8)
                  mutation_method: str = 'uniform',
                  selection_method: str = 'tournament',
-                 random_fill: int = 1):
-        self.pool_size = pool_size
-        self.elite_count = elite_count
-        self.tournament_size = tournament_size
+                 random_fill: int = 2):          # more random exploration (was 1)
+        self.pool_size = max(1, pool_size)
+        self.elite_count = min(elite_count, self.pool_size)
+        self.tournament_size = min(tournament_size, self.pool_size)
         self.crossover_rate = crossover_rate
         self.crossover_method = crossover_method
         self.mutation_rate = mutation_rate
         self.mutation_amount = mutation_amount
         self.mutation_method = mutation_method
         self.selection_method = selection_method
-        self.random_fill = random_fill
+        self.random_fill = min(random_fill, max(0, self.pool_size - self.elite_count))
 
     def evolve_pool(self, pool: ModelPool,
                     model_fitnesses: Optional[Dict[int, float]] = None) -> ModelPool:
@@ -1236,13 +1353,20 @@ class TeamEvolver:
             elites.append(pool.models[idx].copy())
             new_pool.models.append(pool.models[idx].copy())
 
-        # 2. Generate offspring via selection + crossover + mutation
+        # 2. Ensure at least one mutated model (even with pool_size=1)
+        first_mutated = False
         needed = self.pool_size - len(new_pool.models) - self.random_fill
 
         for _ in range(needed):
             child = self._create_offspring(fitness_dict, pool.models)
             if child is not None:
                 new_pool.models.append(child)
+                first_mutated = True
+
+        # If no offspring was created, mutate the last elite
+        if not first_mutated and len(new_pool.models) > 0:
+            new_pool.models[-1] = new_pool.models[-1].mutate(self.mutation_rate, self.mutation_amount)
+            first_mutated = True
 
         # 3. Fill remaining with mutated versions of top models
         while len(new_pool.models) < self.pool_size - self.random_fill:
@@ -1672,13 +1796,19 @@ class EvolutionEngine:
       - Provide API for server endpoints
     """
 
-    def __init__(self):
-        self.weight_manager = WeightManager()
+    def __init__(self, mode: str = ''):
+        mode_name = mode or GAME_MODE
+        if mode:
+            config.switch_mode(mode)
+            _sync_config()
+        self.weight_manager = WeightManager(mode_dir=mode_name)
         self.zone_manager = ZoneManager()
         self.fitness_evaluator = FitnessEvaluator()
         self.population_manager = PopulationManager()
         self.team_evolver = TeamEvolver()
+        self.novelty_evolver = NoveltyEnhancedEvolver(novelty_weight=4.0)
         self.selector = TournamentSelector()
+        self.hparams = HyperparameterScheduler()
 
         self.generation = 0  # global generation counter
         self.total_births = 0
@@ -1689,13 +1819,34 @@ class EvolutionEngine:
 
         self.load_state()
 
+    def reset_for_mode(self, mode: str) -> None:
+        """Completely reset the engine for a new game mode."""
+        config.switch_mode(mode)
+        _sync_config()
+        self.weight_manager = WeightManager(mode_dir=mode)
+        self.zone_manager = ZoneManager()
+        self.population_manager = PopulationManager()
+        self.team_evolver = TeamEvolver()
+        self.novelty_evolver = NoveltyEnhancedEvolver(novelty_weight=4.0)
+        self.hparams = HyperparameterScheduler()
+        self.generation = 0
+        self.total_births = 0
+        self.best_fitness_ever = 0.0
+        self.stats_log = []
+        self.team_last_epoch = {}
+        self.analyzer = StatsAnalyzer(self.stats_log)
+
+        self.weight_manager.init_random_pools()
+        if GAME_MODE == 'team':
+            self.zone_manager.generate()
+
     def load_state(self) -> None:
         """Load existing pools or create new ones, load zones and history."""
         self.weight_manager.load_all()
         self.zone_manager.generate()
 
         # Load generation from stats history
-        stats_file = Path('stats_history.json')
+        stats_file = Path(__file__).parent / 'stats_history.json'
         if stats_file.exists():
             try:
                 with open(stats_file) as f:
@@ -1708,19 +1859,70 @@ class EvolutionEngine:
             except (json.JSONDecodeError, IOError):
                 pass
 
+        # Keep analyzer in sync even if the stats list was reloaded.
+        self.analyzer.history = self.stats_log
+
         # Initialize team last epochs
         for t in range(N_TEAMS):
             pool = self.weight_manager.get_pool(t)
             if pool:
                 self.team_last_epoch[t] = pool.epoch
 
-    def compute_fitness(self, mass: float, survival_time: float, kills: int,
-                        food_eaten: int = 0, distance: float = 0.0,
-                        max_mass: float = 50.0) -> float:
-        """Compute fitness for a single worm."""
-        return self.fitness_evaluator.compute(
-            mass, survival_time, kills, food_eaten, distance
+    def _refresh_training_controls(self) -> Dict[str, float]:
+        """Adapt GA settings from global progress signals."""
+        stagnation = self.analyzer.get_stagnation_count()
+        improvement_rate = self.analyzer.get_improvement_rate(20)
+        self.hparams.update(
+            self.generation,
+            max_generations=1000,
+            current_best_fitness=self.best_fitness_ever,
+            stagnation=stagnation,
         )
+        params = self.hparams.get_params()
+        self.team_evolver.mutation_rate = params['mutation_rate']
+        self.team_evolver.mutation_amount = params['mutation_amount']
+        self.team_evolver.crossover_rate = params['crossover_rate']
+
+        return {
+            **params,
+            'stagnation': stagnation,
+            'improvement_rate': round(improvement_rate, 4),
+        }
+
+    def _configure_team_evolver(self, pool: ModelPool) -> Dict[str, float]:
+        """Tune selection pressure for one pool before evolving it."""
+        diversity = PopulationHealthMetrics.compute_diversity(pool)
+        stagnation = PopulationHealthMetrics.compute_stagnation(pool.epoch_fitness_log)
+        improvement_rate = PopulationHealthMetrics.compute_improvement_rate(pool.epoch_fitness_log)
+        convergence_risk = PopulationHealthMetrics.compute_convergence_risk(pool)
+
+        if convergence_risk > 0.65 or diversity < 0.25 or stagnation > 8:
+            self.team_evolver.selection_method = 'roulette'
+            self.team_evolver.tournament_size = 2
+            self.team_evolver.random_fill = min(
+                max(2, self.team_evolver.pool_size // 3),
+                max(0, self.team_evolver.pool_size - self.team_evolver.elite_count),
+            )
+        elif improvement_rate > 5.0:
+            self.team_evolver.selection_method = 'tournament'
+            self.team_evolver.tournament_size = 5
+            self.team_evolver.random_fill = 1
+        else:
+            self.team_evolver.selection_method = 'tournament'
+            self.team_evolver.tournament_size = 4
+            self.team_evolver.random_fill = 2
+
+        self.team_evolver.random_fill = min(
+            self.team_evolver.random_fill,
+            max(0, self.team_evolver.pool_size - self.team_evolver.elite_count),
+        )
+
+        return {
+            'diversity': round(diversity, 4),
+            'stagnation': stagnation,
+            'improvement_rate': round(improvement_rate, 4),
+            'convergence_risk': round(convergence_risk, 4),
+        }
 
     def process_worm_stats(self, worm: Dict) -> Tuple[int, int, float]:
         """
@@ -1731,12 +1933,16 @@ class EvolutionEngine:
         worm_id = worm.get('id', 0)
         model_idx = worm.get('modelId', 0)
 
-        fitness = self.compute_fitness(
-            worm.get('mass', 0),
-            worm.get('survivalTime', 0),
-            worm.get('kills', 0),
-            worm.get('foodEaten', 0),
-            worm.get('distanceTraveled', 0),
+        fitness = self.fitness_evaluator.compute(
+            mass=worm.get('mass', 0),
+            survival_time=worm.get('survivalTime', 0),
+            kills=worm.get('kills', 0),
+            food_eaten=worm.get('foodEaten', 0),
+            distance=worm.get('distanceTraveled', 0),
+            wall_death=worm.get('wallDeath', False),
+            peak_mass=worm.get('peakMass', 0),
+            zone_time=worm.get('zoneTime', 0),
+            sprint_time=worm.get('sprintTime', 0),
         )
 
         # Record in population manager
@@ -1750,35 +1956,29 @@ class EvolutionEngine:
 
         return team, model_idx, fitness
 
-    def evolve(self, alive_stats: List[Dict], dead_teams: List[int]) -> List[Dict]:
+    def evolve(self, dead_stats: List[Dict], dead_teams: List[int]) -> List[Dict]:
         """
-        Process alive worm stats and evolve dead teams.
-        Teams respawn (epoch++) only when ALL members are dead.
+        Process dead worm stats and evolve dead teams.
+        Fitness is computed ONLY on death — no intermediate evaluations.
 
         Args:
-            alive_stats: List of worm stats dicts from the browser
+            dead_stats: List of dead worm stats dicts (sent once on death)
             dead_teams: List of team indices where all worms are dead
 
         Returns:
             List of evolution results for dead teams.
         """
         evolutions = []
-
-        # Always process alive stats for fitness tracking
-        team_fitnesses = defaultdict(list)
         all_fitnesses = []
-        for w in alive_stats:
+        for w in dead_stats:
             team, mid, f = self.process_worm_stats(w)
-            team_fitnesses[team].append(f)
             all_fitnesses.append((f, w))
 
-        # Update best fitness ever
         if all_fitnesses:
             best_current = max(f for f, _ in all_fitnesses)
             if best_current > self.best_fitness_ever:
                 self.best_fitness_ever = best_current
 
-        # Find best living worm's team for cross-team inspiration
         best_fitness = -1.0
         best_team = -1
         for f, w in all_fitnesses:
@@ -1786,14 +1986,10 @@ class EvolutionEngine:
                 best_fitness = f
                 best_team = w['team']
 
-        # No dead teams — only fitness tracking, no evolution
         if not dead_teams:
             return evolutions
 
-        # Mutation annealing
-        gen = self.generation
-        self.team_evolver.mutation_rate = MUTATION_RATE * (0.3 + 0.7 / (1 + gen / 200))
-        self.team_evolver.mutation_amount = MUTATION_AMOUNT * (0.2 + 0.8 / (1 + gen / 150))
+        global_training = self._refresh_training_controls()
 
         # Evolve each dead team (all members dead → epoch advance)
         for team in dead_teams:
@@ -1802,24 +1998,49 @@ class EvolutionEngine:
                 continue
 
             model_fitnesses = self.population_manager.get_all_model_fitness(team)
+            team_health = self._configure_team_evolver(pool)
+            selection_fitnesses = dict(model_fitnesses)
+            if pool.models:
+                try:
+                    selection_fitnesses = self.novelty_evolver.apply_novelty_to_pool(
+                        pool, model_fitnesses
+                    )
+                except Exception:
+                    selection_fitnesses = dict(model_fitnesses)
 
+            gen = self.generation
             migrate_chance = 0.05 + 0.15 / (1 + gen / 100)
             if best_team >= 0 and best_team != team and random.random() < migrate_chance:
                 best_pool = self.weight_manager.get_pool(best_team)
                 if best_pool:
                     best_model = best_pool.get_best_model()
-                    inject_idx = random.randrange(len(pool.models))
-                    model_fitnesses[inject_idx] = best_fitness * 1.1
+                    if best_model:
+                        inject_idx = random.randrange(len(pool.models))
+                        migrated = best_model.copy()
+                        migrated.team = team
+                        migrated.model_id = inject_idx
+                        migrated.epoch_created = pool.epoch
+                        pool.models[inject_idx] = migrated
+                        selection_fitnesses[inject_idx] = best_fitness * 1.1
 
-            new_pool = self.team_evolver.evolve_pool(pool, model_fitnesses)
+            new_pool = self.team_evolver.evolve_pool(pool, selection_fitnesses)
             self.weight_manager.pools[team] = new_pool
             self.weight_manager.save_pool(team)
 
-            for i, m in enumerate(new_pool.models):
-                m.fitness = model_fitnesses.get(i, 0.0)
-
             models_data = [{'model_idx': i, 'weights': m.to_list()} for i, m in enumerate(new_pool.models)]
-            evolutions.append({'team': team, 'epoch': new_pool.epoch, 'models': models_data})
+            evolutions.append({
+                'team': team,
+                'epoch': new_pool.epoch,
+                'models': models_data,
+                'training': {
+                    **team_health,
+                    'mutation_rate': round(self.team_evolver.mutation_rate, 4),
+                    'mutation_amount': round(self.team_evolver.mutation_amount, 4),
+                    'crossover_rate': round(self.team_evolver.crossover_rate, 4),
+                    'selection_method': self.team_evolver.selection_method,
+                    'random_fill': self.team_evolver.random_fill,
+                },
+            })
             self.total_births += 1
             self.team_last_epoch[team] = new_pool.epoch
             self.population_manager.reset_team(team)
@@ -1828,7 +2049,7 @@ class EvolutionEngine:
 
         stats_snapshot = {
             'generation': self.generation,
-            'alive': len(alive_stats),
+            'alive': len(dead_stats),
             'dead_teams': dead_teams,
             'best_fitness': best_fitness,
             'best_team': best_team,
@@ -1836,10 +2057,11 @@ class EvolutionEngine:
             'best_fitness_ever': self.best_fitness_ever,
             'timestamp': time.time(),
             'team_epochs': dict(self.team_last_epoch),
+            'training': global_training,
         }
         self.stats_log.append(stats_snapshot)
         if len(self.stats_log) > 1000:
-            self.stats_log = self.stats_log[-1000:]
+            del self.stats_log[:-1000]
 
         self.save_state()
         return evolutions
@@ -1847,7 +2069,8 @@ class EvolutionEngine:
     def save_state(self) -> None:
         """Save stats history to disk."""
         try:
-            with open('stats_history.json', 'w') as f:
+            stats_file = Path(__file__).parent / 'stats_history.json'
+            with open(stats_file, 'w') as f:
                 json.dump(self.stats_log[-500:], f)
         except IOError:
             pass
@@ -1910,6 +2133,18 @@ class EvolutionEngine:
             'totalBirths': self.total_births,
             'zones': self.zone_manager.to_dict(),
             'teamEpochs': team_epochs,
+            'training': {
+                'mutation_rate': round(self.team_evolver.mutation_rate, 4),
+                'mutation_amount': round(self.team_evolver.mutation_amount, 4),
+                'crossover_rate': round(self.team_evolver.crossover_rate, 4),
+                'selection_method': self.team_evolver.selection_method,
+                'tournament_size': self.team_evolver.tournament_size,
+                'random_fill': self.team_evolver.random_fill,
+                'stagnation': self.analyzer.get_stagnation_count(),
+                'improvement_rate': round(self.analyzer.get_improvement_rate(20), 4),
+                'novelty_weight': round(self.novelty_evolver.novelty_weight, 4),
+                'novelty_archive_size': len(self.novelty_evolver.archive.archive),
+            },
             'pools': {
                 str(t): {
                     'epoch': info.get('epoch', 0),
@@ -3628,14 +3863,35 @@ class TeamStatistics:
         if len(epochs) < 3:
             return 0.0
 
-        # Simple rank correlation
-        from scipy.stats import spearmanr
-        # If scipy not available, compute manually
         n = len(epochs)
-        epochs_rank = sorted(range(n), key=lambda i: epochs[i])
-        fit_rank = sorted(range(n), key=lambda i: fitnesses[i])
-        d_sq = sum((epochs_rank[i] - fit_rank[i]) ** 2 for i in range(n))
-        return 1.0 - (6.0 * d_sq) / (n * (n * n - 1))
+
+        def _rank(values: List[float]) -> List[float]:
+            indexed = sorted(enumerate(values), key=lambda x: x[1])
+            ranks = [0.0] * len(values)
+            i = 0
+            while i < len(indexed):
+                j = i
+                while j < len(indexed) and indexed[j][1] == indexed[i][1]:
+                    j += 1
+                avg_rank = (i + j - 1) / 2.0 + 1.0
+                for k in range(i, j):
+                    ranks[indexed[k][0]] = avg_rank
+                i = j
+            return ranks
+
+        epoch_ranks = _rank(epochs)
+        fitness_ranks = _rank(fitnesses)
+        mean_epoch = sum(epoch_ranks) / n
+        mean_fit = sum(fitness_ranks) / n
+        numerator = sum(
+            (a - mean_epoch) * (b - mean_fit)
+            for a, b in zip(epoch_ranks, fitness_ranks)
+        )
+        denom_epoch = math.sqrt(sum((a - mean_epoch) ** 2 for a in epoch_ranks))
+        denom_fit = math.sqrt(sum((b - mean_fit) ** 2 for b in fitness_ranks))
+        if denom_epoch < 1e-12 or denom_fit < 1e-12:
+            return 0.0
+        return max(-1.0, min(1.0, numerator / (denom_epoch * denom_fit)))
 
     @staticmethod
     def compute_team_dominance(engine: EvolutionEngine) -> Dict[int, float]:
@@ -4631,11 +4887,1634 @@ Configuration Summary:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# MAIN
+# SECTION 50: NOVELTY SEARCH
 # ═══════════════════════════════════════════════════════════════════
+# Novelty search rewards behavioral novelty instead of (or in addition to)
+# fitness. This prevents premature convergence and encourages exploration
+# of the behavioral space.
+#
+# Architecture:
+#   - Behavior characterization: extract a behavior vector from each model
+#   - Novelty metric: average k-NN distance in behavior space
+#   - Archive: store novel behaviors for diversity reference
+#   - Combined fitness: weighted sum of task fitness + novelty bonus
+
+class BehaviorCharacterizer:
+    """
+    Extract behavior descriptors from neural network models.
+    
+    The behavior descriptor captures what the worm actually DOES
+    rather than how well it performs. Key behavioral dimensions:
+      - Food-seeking tendency (how strongly outputs turn toward food)
+      - Sprint frequency (how often boost > 0.6)
+      - Wall avoidance (output response to wall proximity)
+      - Aggression (turn toward enemies)
+      - Exploration (randomness/stochasticity of outputs)
+    
+    The descriptor is computed by running the NN on a standardized
+    set of input patterns and recording the output distributions.
+    """
+
+    def __init__(self, n_samples: int = 50):
+        self.n_samples = n_samples
+        # Standardized input patterns covering the perception space
+        self.probes = self._generate_probes()
+
+    def _generate_probes(self) -> List[List[float]]:
+        """Generate standardized input patterns for behavior testing."""
+        probes = []
+        # Scenario 1: food directly ahead, no enemies, no walls
+        inp = [0.0] * N_INPUT
+        for ri in range(8):
+            for li in range(5):
+                idx = ri * 5 + li
+                if li == 1:  # food layer
+                    inp[idx] = 0.8 if ri == 0 else 0.1
+                elif li == 0:  # wall layer
+                    inp[idx] = 0.0
+                elif li == 3:  # enemy layer
+                    inp[idx] = 0.0
+                else:
+                    inp[idx] = 0.3
+        inp[-4] = BASE_SPEED / 6  # speed
+        inp[-3] = 0.2  # mass ratio
+        inp[-2] = 0.1  # survival ratio
+        inp[-1] = 0.0  # in enemy zone
+        probes.append(inp)
+
+        # Scenario 2: enemy to the right, food behind, walls ahead
+        inp2 = [0.0] * N_INPUT
+        for ri in range(8):
+            for li in range(5):
+                idx = ri * 5 + li
+                if li == 1:  # food
+                    inp2[idx] = 0.6 if ri == 4 else 0.0
+                elif li == 0:  # wall ahead
+                    inp2[idx] = 0.9 if ri == 0 else 0.1
+                elif li == 3:  # enemy right
+                    inp2[idx] = 0.7 if ri == 2 else 0.0
+                else:
+                    inp2[idx] = 0.0
+        inp2[-4] = BASE_SPEED / 6
+        inp2[-3] = 0.5
+        inp2[-2] = 0.5
+        inp2[-1] = 1.0  # in enemy zone!
+        probes.append(inp2)
+
+        # Scenario 3: walls on both sides, food far ahead
+        inp3 = [0.0] * N_INPUT
+        for ri in range(8):
+            for li in range(5):
+                idx = ri * 5 + li
+                if li == 0:  # walls
+                    inp3[idx] = 0.7 if ri in (6, 7, 0, 1) else 0.0
+                elif li == 1:  # food far
+                    inp3[idx] = 0.3 if ri == 0 else 0.0
+                else:
+                    inp3[idx] = 0.0
+        inp3[-4] = BASE_SPEED / 6
+        inp3[-3] = 0.8
+        inp3[-2] = 0.7
+        inp3[-1] = 0.0
+        probes.append(inp3)
+
+        # Additional random probes for variety
+        for _ in range(self.n_samples - 3):
+            rp = [random.uniform(0, 1) for _ in range(N_INPUT)]
+            rp[-4] = BASE_SPEED / 6  # keep speed consistent
+            probes.append(rp)
+
+        return probes
+
+    def characterize(self, model: NeuralNetwork) -> List[float]:
+        """
+        Extract behavior descriptor vector from a model.
+        
+        Returns a fixed-length vector summarizing behavioral tendencies:
+          [0]  avg turn magnitude (aggression/decisiveness)
+          [1]  avg boost (sprint tendency)
+          [2]  food alignment (correlation with food direction)
+          [3]  wall avoidance strength
+          [4]  enemy response magnitude
+          [5]  output variance (exploration vs exploitation)
+          [6]  turn bias (left vs right preference)
+          [7]  boost consistency (always sprinting vs never)
+        """
+        turns = []
+        boosts = []
+        food_turns = []
+        wall_turns = []
+        enemy_turns = []
+
+        for inp in self.probes:
+            out = model.forward(inp)
+            turns.append(out['turn'])
+            boosts.append(out['boost'])
+
+            # Food layer is index 1 in each ray
+            food_signal = sum(inp[ri * 5 + 1] for ri in range(8)) / 8.0
+            food_turns.append(out['turn'] * food_signal)
+
+            # Wall layer is index 0
+            wall_signal = sum(inp[ri * 5 + 0] for ri in range(8)) / 8.0
+            wall_turns.append(abs(out['turn']) * wall_signal)
+
+            # Enemy layer is index 3
+            enemy_signal = sum(inp[ri * 5 + 3] for ri in range(8)) / 8.0
+            enemy_turns.append(out['turn'] * enemy_signal)
+
+        if not turns:
+            return [0.0] * 8
+
+        avg_turn = sum(abs(t) for t in turns) / len(turns)
+        avg_boost = sum(boosts) / len(boosts)
+        food_align = sum(food_turns) / max(len(food_turns), 1)
+        wall_avoid = sum(wall_turns) / max(len(wall_turns), 1)
+        enemy_resp = sum(enemy_turns) / max(len(enemy_turns), 1)
+        output_var = statistics.stdev(turns) if len(turns) > 1 else 0.0
+        turn_bias = sum(turns) / len(turns) if turns else 0.0
+        boost_consistency = statistics.stdev(boosts) if len(boosts) > 1 else 0.0
+
+        return [
+            round(avg_turn, 4),
+            round(avg_boost, 4),
+            round(food_align, 4),
+            round(wall_avoid, 4),
+            round(enemy_resp, 4),
+            round(output_var, 4),
+            round(turn_bias, 4),
+            round(1.0 - min(boost_consistency, 1.0), 4),
+        ]
+
+
+class NoveltyArchive:
+    """
+    Stores novel behavior descriptors for reference.
+    
+    When computing novelty of a new model, we measure its average
+    distance to the k nearest neighbors in the archive. If it's
+    sufficiently different from all archived behaviors, it gets
+    added to the archive.
+    """
+
+    def __init__(self, k_neighbors: int = 5,
+                 novelty_threshold: float = 0.15,
+                 max_archive_size: int = 500):
+        self.archive: List[Tuple[List[float], float]] = []  # (descriptor, fitness)
+        self.k = k_neighbors
+        self.threshold = novelty_threshold
+        self.max_size = max_archive_size
+        self.characterizer = BehaviorCharacterizer()
+
+    def compute_novelty(self, descriptor: List[float]) -> float:
+        """Compute novelty score as average distance to k nearest neighbors."""
+        if len(self.archive) < self.k:
+            return 1.0  # everything is novel when archive is small
+
+        distances = []
+        for archived_desc, _ in self.archive:
+            dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(descriptor, archived_desc)))
+            distances.append(dist)
+
+        distances.sort()
+        k_dist = distances[:min(self.k, len(distances))]
+        return sum(k_dist) / len(k_dist) if k_dist else 0.0
+
+    def add_if_novel(self, descriptor: List[float], fitness: float) -> bool:
+        """Add to archive if sufficiently novel. Returns True if added."""
+        novelty = self.compute_novelty(descriptor)
+        if novelty > self.threshold:
+            self.archive.append((descriptor, fitness))
+            if len(self.archive) > self.max_size:
+                # Remove oldest entry
+                self.archive.pop(0)
+            return True
+        return False
+
+    def get_novelty_bonus(self, descriptor: List[float],
+                          weight: float = 0.3) -> float:
+        """Compute novelty bonus for combined fitness."""
+        novelty = self.compute_novelty(descriptor)
+        return novelty * weight
+
+    def get_statistics(self) -> Dict:
+        return {
+            'archive_size': len(self.archive),
+            'novelty_threshold': self.threshold,
+            'max_size': self.max_size,
+        }
+
+
+class NoveltyEnhancedEvolver:
+    """
+    Evolution strategy that combines task fitness with novelty search.
+    
+    Each model's combined score = task_fitness + novelty_bonus * novelty_weight.
+    The novelty bonus decreases over generations as the archive fills,
+    shifting focus from exploration to exploitation.
+    """
+
+    def __init__(self, novelty_weight: float = 0.5,
+                 anneal_rate: float = 0.995,
+                 k_neighbors: int = 5):
+        self.archive = NoveltyArchive(k_neighbors=k_neighbors)
+        self.novelty_weight = novelty_weight
+        self.anneal_rate = anneal_rate
+        self.characterizer = BehaviorCharacterizer()
+
+    def compute_combined_fitness(self, model: NeuralNetwork,
+                                  task_fitness: float) -> float:
+        """Compute combined fitness = task_fitness + novelty_bonus."""
+        desc = self.characterizer.characterize(model)
+        bonus = self.archive.get_novelty_bonus(desc, self.novelty_weight)
+        combined = task_fitness + bonus
+        self.archive.add_if_novel(desc, combined)
+        return combined
+
+    def apply_novelty_to_pool(self, pool: ModelPool,
+                               task_fitnesses: Dict[int, float]) -> Dict[int, float]:
+        """Apply novelty bonuses to all models in a pool."""
+        combined = {}
+        for i, model in enumerate(pool.models):
+            tf = task_fitnesses.get(i, model.fitness)
+            combined[i] = self.compute_combined_fitness(model, tf)
+        # Anneal novelty weight
+        self.novelty_weight *= self.anneal_rate
+        self.novelty_weight = max(0.05, self.novelty_weight)
+        return combined
+
+    def get_report(self) -> Dict:
+        return {
+            'novelty_weight': round(self.novelty_weight, 3),
+            'archive': self.archive.get_statistics(),
+        }
+
 
 # ═══════════════════════════════════════════════════════════════════
-# SECTION 50: EVOLUTION PERFORMANCE BENCHMARKING
+# SECTION 51: ADAPTIVE PARAMETER SCHEDULER
+# ═══════════════════════════════════════════════════════════════════
+# Dynamically adjusts mutation rate, crossover rate, and tournament size
+# based on population health metrics:
+#   - Stagnation: if fitness hasn't improved for N generations → increase mutation
+#   - Diversity collapse: if models become too similar → increase mutation
+#   - Rapid improvement: if fitness is rising fast → decrease mutation (exploit)
+
+class PopulationHealthMetrics:
+    """Compute health metrics for a model pool."""
+
+    @staticmethod
+    def compute_diversity(pool: ModelPool) -> float:
+        """Average pairwise distance between all models."""
+        if len(pool.models) < 2:
+            return 0.0
+        samples = random.sample(pool.models, min(10, len(pool.models)))
+        total = 0.0
+        pairs = 0
+        for i in range(len(samples)):
+            for j in range(i + 1, len(samples)):
+                total += samples[i].similarity(samples[j])
+                pairs += 1
+        return total / pairs if pairs > 0 else 0.0
+
+    @staticmethod
+    def compute_stagnation(epoch_fitness_log: List[float],
+                           recent_n: int = 10) -> int:
+        """How many generations since fitness improved significantly (>1%)."""
+        if len(epoch_fitness_log) < 2:
+            return 0
+        recent = epoch_fitness_log[-recent_n:]
+        best = max(recent)
+        best_idx = len(recent) - 1 - recent[::-1].index(best)
+        return len(recent) - 1 - best_idx if best_idx < len(recent) - 1 else 0
+
+    @staticmethod
+    def compute_improvement_rate(epoch_fitness_log: List[float],
+                                 window: int = 5) -> float:
+        """Rate of fitness improvement over recent generations."""
+        if len(epoch_fitness_log) < window:
+            return 0.0
+        recent = epoch_fitness_log[-window:]
+        return (recent[-1] - recent[0]) / max(len(recent), 1)
+
+    @staticmethod
+    def compute_convergence_risk(pool: ModelPool) -> float:
+        """
+        Risk of premature convergence (0..1).
+        High when diversity is low and fitness is stagnant.
+        """
+        div = PopulationHealthMetrics.compute_diversity(pool)
+        stag = PopulationHealthMetrics.compute_stagnation(pool.epoch_fitness_log)
+        # Low diversity + high stagnation = high risk
+        risk = (1.0 - min(div / 2.0, 1.0)) * 0.5 + min(stag / 20.0, 1.0) * 0.5
+        return min(1.0, risk)
+
+
+class AdaptiveParameterScheduler:
+    """
+    Dynamically adjusts GA hyperparameters based on population health.
+    
+    Strategy:
+      - Stagnation detected → increase mutation_rate, decrease crossover_rate
+      - Diversity collapsing → increase mutation_amount, add random immigrants
+      - Strong improvement → decrease mutation, increase crossover (exploit)
+      - Convergence risk high → increase tournament_size, boost elites
+    """
+
+    def __init__(self,
+                 base_mutation_rate: float = 0.08,
+                 base_mutation_amount: float = 0.5,
+                 base_crossover_rate: float = 0.6,
+                 min_mutation_rate: float = 0.02,
+                 max_mutation_rate: float = 0.25,
+                 min_mutation_amount: float = 0.1,
+                 max_mutation_amount: float = 1.5,
+                 min_crossover_rate: float = 0.3,
+                 max_crossover_rate: float = 0.85,
+                 adaptation_rate: float = 0.1):
+        self.mutation_rate = base_mutation_rate
+        self.mutation_amount = base_mutation_amount
+        self.crossover_rate = base_crossover_rate
+        self.base_mutation_rate = base_mutation_rate
+        self.base_mutation_amount = base_mutation_amount
+        self.base_crossover_rate = base_crossover_rate
+        self.min_mr = min_mutation_rate
+        self.max_mr = max_mutation_rate
+        self.min_ma = min_mutation_amount
+        self.max_ma = max_mutation_amount
+        self.min_cr = min_crossover_rate
+        self.max_cr = max_crossover_rate
+        self.adaptation_rate = adaptation_rate
+        self.history: List[Dict] = []
+
+    def adapt(self, health: Dict) -> Dict:
+        """
+        Adapt parameters based on population health metrics.
+        
+        Args:
+            health: dict with keys 'diversity', 'stagnation', 'improvement_rate',
+                    'convergence_risk'
+        
+        Returns:
+            dict with adapted parameter values
+        """
+        div = health.get('diversity', 0.5)
+        stag = health.get('stagnation', 0)
+        impr = health.get('improvement_rate', 0.0)
+        risk = health.get('convergence_risk', 0.0)
+
+        # Stagnation response: increase mutation
+        if stag > 5:
+            self.mutation_rate = min(
+                self.max_mr,
+                self.mutation_rate + self.adaptation_rate * 0.2
+            )
+            self.mutation_amount = min(
+                self.max_ma,
+                self.mutation_amount + self.adaptation_rate * 0.3
+            )
+        else:
+            # Revert toward base
+            self.mutation_rate += (self.base_mutation_rate - self.mutation_rate) * 0.05
+            self.mutation_amount += (self.base_mutation_amount - self.mutation_amount) * 0.05
+
+        # Diversity response: increase mutation if diversity low
+        if div < 0.3:
+            self.mutation_rate = min(
+                self.max_mr,
+                self.mutation_rate + self.adaptation_rate * (1.0 - div)
+            )
+            self.crossover_rate = max(
+                self.min_cr,
+                self.crossover_rate - self.adaptation_rate * 0.1
+            )
+        elif div > 1.5:
+            # Too much diversity — stabilize
+            self.crossover_rate = min(
+                self.max_cr,
+                self.crossover_rate + self.adaptation_rate * 0.1
+            )
+
+        # Improvement response: exploit when improving
+        if impr > 5.0:
+            self.mutation_rate = max(
+                self.min_mr,
+                self.mutation_rate - self.adaptation_rate * 0.15
+            )
+            self.crossover_rate = min(
+                self.max_cr,
+                self.crossover_rate + self.adaptation_rate * 0.15
+            )
+
+        # Convergence risk: boost mutation
+        if risk > 0.7:
+            self.mutation_rate = min(
+                self.max_mr,
+                self.mutation_rate + self.adaptation_rate * risk
+            )
+            self.mutation_amount = min(
+                self.max_ma,
+                self.mutation_amount + self.adaptation_rate * 0.2
+            )
+
+        # Clamp
+        self.mutation_rate = max(self.min_mr, min(self.max_mr, self.mutation_rate))
+        self.mutation_amount = max(self.min_ma, min(self.max_ma, self.mutation_amount))
+        self.crossover_rate = max(self.min_cr, min(self.max_cr, self.crossover_rate))
+
+        params = {
+            'mutation_rate': round(self.mutation_rate, 3),
+            'mutation_amount': round(self.mutation_amount, 3),
+            'crossover_rate': round(self.crossover_rate, 3),
+        }
+
+        self.history.append({**params, **health, 'timestamp': time.time()})
+        if len(self.history) > 1000:
+            self.history = self.history[-1000:]
+
+        return params
+
+    def get_history(self) -> List[Dict]:
+        return self.history[-50:]
+
+    def get_summary(self) -> str:
+        return (f'MR={self.mutation_rate:.3f} MA={self.mutation_amount:.3f} '
+                f'CR={self.crossover_rate:.3f}')
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SECTION 52: ENHANCED SPECIATION INTEGRATION
+# ═══════════════════════════════════════════════════════════════════
+# Integrates speciation into the TeamEvolver's GA loop.
+# Instead of selecting parents from the whole population, we:
+#   1. Classify models into species by weight similarity
+#   2. Apply fitness sharing within each species
+#   3. Select parents proportionally to species size (protect niches)
+#   4. Allow occasional cross-species mating for hybridization
+
+class SpeciationEnhancedEvolver:
+    """
+    Evolution strategy with integrated speciation support.
+    
+    Maintains species diversity by:
+      - Clustering models into species based on genetic distance
+      - Applying fitness sharing (dividing fitness by species size)
+      - Ensuring each species contributes offspring proportionally
+      - Allowing cross-species mating for hybridization
+    """
+
+    def __init__(self,
+                 similarity_threshold: float = 0.5,
+                 cross_species_mating_rate: float = 0.1,
+                 target_species: int = 4,
+                 compatibility_modifier: float = 1.0):
+        self.speciation = Speciation(similarity_threshold, compatibility_modifier)
+        self.cross_species_rate = cross_species_mating_rate
+        self.target_species = target_species
+        self.history: List[Dict] = []
+
+    def evolve_with_speciation(self, pool: ModelPool,
+                                fitness_dict: Dict[int, float]) -> ModelPool:
+        """
+        Evolve a pool using speciation-protected evolution.
+        
+        1. Classify models into species
+        2. Apply fitness sharing
+        3. Allocate offspring slots per species
+        4. Generate offspring within each species
+        5. Allow occasional cross-species mating
+        """
+        # Classify into species
+        species = self.speciation.classify(pool.models)
+        self._adjust_threshold(species)
+
+        # Apply fitness sharing
+        shared_fitness = self.speciation.apply_fitness_sharing(
+            pool.models, fitness_dict, species
+        )
+
+        # Allocate offspring slots proportionally to species fitness
+        species_fitness = {}
+        for sid, members in species.items():
+            if members:
+                species_fitness[sid] = sum(
+                    shared_fitness.get(m, 0) for m in members
+                ) / len(members)
+
+        total_sf = sum(species_fitness.values()) or 1.0
+        n_models = MODELS_PER_TEAM
+
+        new_pool = ModelPool(pool.team, pool.team_name, pool.team_color)
+        new_pool.models = []
+
+        # Elites from each species
+        elites_per_species = max(1, 2 // max(len(species), 1))
+        for sid, members in species.items():
+            sorted_members = sorted(members, key=lambda m: fitness_dict.get(m, 0), reverse=True)
+            for idx in sorted_members[:elites_per_species]:
+                if len(new_pool.models) < n_models:
+                    new_pool.models.append(pool.models[idx].copy())
+
+        # Fill remaining slots with offspring per species
+        remaining = n_models - len(new_pool.models) - 2  # reserve for random
+        for sid, members in species.items():
+            alloc = max(1, int(remaining * species_fitness.get(sid, 0) / total_sf))
+            for _ in range(alloc):
+                if len(new_pool.models) >= n_models - 2:
+                    break
+                # Select two parents from same species
+                if len(members) >= 2:
+                    p1, p2 = random.sample(members, 2)
+                    w1 = pool.models[p1].to_list()
+                    w2 = pool.models[p2].to_list()
+                    child_w, _ = CrossoverMethods.crossover_pair(w1, w2, 'uniform')
+                    child = NeuralNetwork(child_w)
+                    if random.random() < MUTATION_RATE:
+                        child_w = MutationMethods.uniform(
+                            child.to_list(), MUTATION_RATE, MUTATION_AMOUNT
+                        )
+                        child = NeuralNetwork(child_w)
+                    new_pool.models.append(child)
+
+        # Cross-species mating (hybridization)
+        cross_count = max(1, int(n_models * self.cross_species_rate))
+        species_list = list(species.values())
+        for _ in range(cross_count):
+            if len(species_list) >= 2:
+                s1, s2 = random.sample(species_list, 2)
+                if s1 and s2:
+                    p1 = random.choice(s1)
+                    p2 = random.choice(s2)
+                    w1 = pool.models[p1].to_list()
+                    w2 = pool.models[p2].to_list()
+                    child_w, _ = CrossoverMethods.crossover_pair(w1, w2, 'blend')
+                    child = NeuralNetwork(child_w)
+                    child_w = MutationMethods.uniform(
+                        child.to_list(), MUTATION_RATE * 1.5, MUTATION_AMOUNT
+                    )
+                    child = NeuralNetwork(child_w)
+                    new_pool.models.append(child)
+
+        # Fill remaining with random
+        while len(new_pool.models) < n_models:
+            new_pool.models.append(NeuralNetwork.random())
+
+        # Trim excess
+        while len(new_pool.models) > n_models:
+            new_pool.models.pop()
+
+        # Set metadata
+        for i, m in enumerate(new_pool.models):
+            m.team = pool.team
+            m.model_id = i
+            m.epoch_created = pool.epoch + 1
+
+        new_pool.epoch = pool.epoch + 1
+        new_pool.best_fitness_ever = pool.best_fitness_ever
+        new_pool.epoch_fitness_log = list(pool.epoch_fitness_log)
+
+        best_in_new = max(m.fitness for m in new_pool.models)
+        new_pool.epoch_fitness_log.append(best_in_new)
+        if best_in_new > new_pool.best_fitness_ever:
+            new_pool.best_fitness_ever = best_in_new
+
+        # Record stats
+        n_species = len(species)
+        avg_species_size = sum(len(m) for m in species.values()) / max(n_species, 1)
+        self.history.append({
+            'epoch': new_pool.epoch,
+            'n_species': n_species,
+            'avg_species_size': round(avg_species_size, 1),
+            'threshold': self.speciation.threshold,
+            'best_fitness': best_in_new,
+        })
+
+        return new_pool
+
+    def _adjust_threshold(self, species: Dict[int, List[int]]) -> None:
+        """Dynamically adjust similarity threshold to maintain target species count."""
+        n_species = len(species)
+        if n_species < self.target_species - 1:
+            self.speciation.threshold *= 0.9  # make it easier to speciate
+        elif n_species > self.target_species + 1:
+            self.speciation.threshold *= 1.1  # make it harder
+        self.speciation.threshold = max(0.1, min(2.0, self.speciation.threshold))
+
+    def get_species_report(self, pool: ModelPool) -> str:
+        """Generate a formatted report of current species."""
+        species = self.speciation.classify(pool.models)
+        lines = [f'Species ({len(species)}):']
+        for sid, members in sorted(species.items()):
+            fits = [pool.models[m].fitness for m in members]
+            avg_f = sum(fits) / len(fits) if fits else 0
+            lines.append(f'  #{sid}: {len(members)} models, avg fitness {avg_f:.1f}')
+        return '\n'.join(lines)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SECTION 53: ISLAND MODEL MIGRATION MANAGER
+# ═══════════════════════════════════════════════════════════════════
+# Manages periodic migration of genetic material between teams (islands).
+# This prevents each island from converging to local optima and shares
+# successful genetic innovations across the population.
+
+class IslandMigrationManager:
+    """
+    Coordinates migration between team islands.
+    
+    Migration strategies:
+      'ring': each island sends its best to the next island (circular)
+      'random': random pairs exchange models
+      'broadcast': best model from best island sent to all others
+      'tournament': islands compete, winners take models from losers
+    
+    Migration schedule:
+      - Frequency: every N generations (configurable)
+      - Rate: how many models to exchange per migration event
+      - Selection: which models to send (best, random, or diverse)
+    """
+
+    def __init__(self,
+                 topology: str = 'ring',
+                 migration_interval: int = 5,
+                 models_per_migration: int = 2,
+                 send_strategy: str = 'best',
+                 replace_strategy: str = 'worst'):
+        self.topology = topology
+        self.interval = migration_interval
+        self.models_per_migration = models_per_migration
+        self.send_strategy = send_strategy
+        self.replace_strategy = replace_strategy
+        self.migration_log: List[Dict] = []
+        self.generations_since_migration = 0
+
+    def should_migrate(self, generation: int) -> bool:
+        """Check if migration should occur at this generation."""
+        return generation > 0 and generation % self.interval == 0
+
+    def execute_migration(self, engine: EvolutionEngine) -> List[Dict]:
+        """
+        Execute one migration event across all islands.
+        Returns list of migration records.
+        """
+        self.generations_since_migration = 0
+        migrations = []
+
+        if self.topology == 'ring':
+            migrations = self._ring_migration(engine)
+        elif self.topology == 'random':
+            migrations = self._random_migration(engine)
+        elif self.topology == 'broadcast':
+            migrations = self._broadcast_migration(engine)
+        elif self.topology == 'tournament':
+            migrations = self._tournament_migration(engine)
+
+        self.migration_log.extend(migrations)
+        return migrations
+
+    def _get_sender_models(self, pool: ModelPool, count: int) -> List[Tuple[int, NeuralNetwork]]:
+        """Select models to send based on strategy."""
+        if self.send_strategy == 'best':
+            return pool.get_top_n(count)
+        elif self.send_strategy == 'random':
+            indices = random.sample(range(len(pool.models)), min(count, len(pool.models)))
+            return [(i, pool.models[i].copy()) for i in indices]
+        elif self.send_strategy == 'diverse':
+            # Send most diverse (least similar to average)
+            avg_w = [sum(m.weights[j] for m in pool.models) / len(pool.models)
+                     for j in range(WEIGHT_COUNT)]
+            diversities = []
+            for i, m in enumerate(pool.models):
+                dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(m.weights, avg_w)))
+                diversities.append((i, dist))
+            diversities.sort(key=lambda x: -x[1])
+            return [(i, pool.models[i].copy()) for i, _ in diversities[:count]]
+        return pool.get_top_n(count)
+
+    def _replace_models(self, pool: ModelPool,
+                         immigrants: List[Tuple[int, NeuralNetwork]]) -> None:
+        """Replace models in pool based on strategy."""
+        if self.replace_strategy == 'worst':
+            # Replace worst models
+            indexed = list(enumerate(pool.models))
+            indexed.sort(key=lambda x: x[1].fitness)
+            for i, (idx, _) in enumerate(indexed[:len(immigrants)]):
+                if i < len(immigrants):
+                    _, imm_model = immigrants[i]
+                    pool.models[idx] = imm_model
+                    pool.models[idx].model_id = idx
+        elif self.replace_strategy == 'random':
+            replace_indices = random.sample(
+                range(len(pool.models)), min(len(immigrants), len(pool.models))
+            )
+            for i, idx in enumerate(replace_indices):
+                if i < len(immigrants):
+                    _, imm_model = immigrants[i]
+                    pool.models[idx] = imm_model
+                    pool.models[idx].model_id = idx
+        elif self.replace_strategy == 'oldest':
+            # Replace models with oldest epoch_created
+            indexed = list(enumerate(pool.models))
+            indexed.sort(key=lambda x: x[1].epoch_created)
+            for i, (idx, _) in enumerate(indexed[:len(immigrants)]):
+                if i < len(immigrants):
+                    _, imm_model = immigrants[i]
+                    pool.models[idx] = imm_model
+                    pool.models[idx].model_id = idx
+
+    def _ring_migration(self, engine: EvolutionEngine) -> List[Dict]:
+        """Circular migration: team i sends to team (i+1) % N."""
+        migrations = []
+        teams = list(range(N_TEAMS))
+        random.shuffle(teams)
+
+        for i in range(len(teams)):
+            src = teams[i]
+            dst = teams[(i + 1) % len(teams)]
+            src_pool = engine.weight_manager.get_pool(src)
+            dst_pool = engine.weight_manager.get_pool(dst)
+
+            if src_pool and dst_pool:
+                immigrants = self._get_sender_models(
+                    src_pool, self.models_per_migration
+                )
+                self._replace_models(dst_pool, immigrants)
+                for idx, model in immigrants:
+                    migrations.append({
+                        'from': src, 'to': dst,
+                        'model_idx': idx,
+                        'fitness': model.fitness,
+                        'epoch': src_pool.epoch,
+                        'type': 'ring',
+                    })
+        return migrations
+
+    def _random_migration(self, engine: EvolutionEngine) -> List[Dict]:
+        """Random pairs exchange models."""
+        migrations = []
+        teams = list(range(N_TEAMS))
+        pairs = []
+        for _ in range(N_TEAMS // 2):
+            if len(teams) < 2:
+                break
+            a = random.choice(teams)
+            teams.remove(a)
+            b = random.choice(teams)
+            teams.remove(b)
+            pairs.append((a, b))
+
+        for src, dst in pairs:
+            src_pool = engine.weight_manager.get_pool(src)
+            dst_pool = engine.weight_manager.get_pool(dst)
+            if src_pool and dst_pool:
+                immigrants = self._get_sender_models(
+                    src_pool, self.models_per_migration
+                )
+                self._replace_models(dst_pool, immigrants)
+                for idx, model in immigrants:
+                    migrations.append({
+                        'from': src, 'to': dst,
+                        'model_idx': idx,
+                        'fitness': model.fitness,
+                        'epoch': src_pool.epoch,
+                        'type': 'random',
+                    })
+        return migrations
+
+    def _broadcast_migration(self, engine: EvolutionEngine) -> List[Dict]:
+        """Best team broadcasts its best models to all others."""
+        migrations = []
+        best_team = EvolutionEngineExtensions.find_best_team(engine)
+        if best_team is None:
+            return migrations
+
+        best_pool = engine.weight_manager.get_pool(best_team)
+        if not best_pool:
+            return migrations
+
+        immigrants = self._get_sender_models(best_pool, self.models_per_migration)
+        for t in range(N_TEAMS):
+            if t == best_team:
+                continue
+            dst_pool = engine.weight_manager.get_pool(t)
+            if dst_pool:
+                self._replace_models(dst_pool, immigrants)
+                for idx, model in immigrants:
+                    migrations.append({
+                        'from': best_team, 'to': t,
+                        'model_idx': idx,
+                        'fitness': model.fitness,
+                        'epoch': best_pool.epoch,
+                        'type': 'broadcast',
+                    })
+        return migrations
+
+    def _tournament_migration(self, engine: EvolutionEngine) -> List[Dict]:
+        """Teams compete; winners take models from losers."""
+        migrations = []
+        teams = list(range(N_TEAMS))
+        random.shuffle(teams)
+
+        for i in range(0, len(teams) - 1, 2):
+            a, b = teams[i], teams[i + 1]
+            pa = engine.weight_manager.get_pool(a)
+            pb = engine.weight_manager.get_pool(b)
+            if not pa or not pb:
+                continue
+            if pa.get_best_fitness() > pb.get_best_fitness():
+                winner, loser = pa, pb
+                winner_id, loser_id = a, b
+            else:
+                winner, loser = pb, pa
+                winner_id, loser_id = b, a
+
+            immigrants = self._get_sender_models(winner, 1)
+            self._replace_models(loser, immigrants)
+            for idx, model in immigrants:
+                migrations.append({
+                    'from': winner_id, 'to': loser_id,
+                    'model_idx': idx,
+                    'fitness': model.fitness,
+                    'epoch': winner.epoch,
+                    'type': 'tournament',
+                })
+        return migrations
+
+    def get_migration_stats(self) -> Dict:
+        if not self.migration_log:
+            return {'total': 0}
+        return {
+            'total_migrations': len(self.migration_log),
+            'unique_senders': len(set(m['from'] for m in self.migration_log)),
+            'unique_receivers': len(set(m['to'] for m in self.migration_log)),
+            'avg_fitness_migrated': sum(m['fitness'] for m in self.migration_log) / len(self.migration_log),
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SECTION 54: ELITE PRESERVATION STRATEGIES
+# ═══════════════════════════════════════════════════════════════════
+# Different strategies for selecting and preserving elite models
+# across generations beyond simple top-N selection.
+
+class ElitePreservationStrategies:
+    """
+    Multiple elite preservation strategies for genetic algorithms.
+    
+    Strategies:
+      'top_n': keep the absolute best N models (default)
+      'diverse_elites': keep the best model from each niche/region
+      'age_based': keep models that have survived multiple generations
+      'stochastic': probabilistic preservation (better fitness = higher chance)
+      'gap': keep models that represent gaps in the fitness landscape
+    """
+
+    @staticmethod
+    def select_top_n(pool: ModelPool, n: int) -> List[NeuralNetwork]:
+        """Standard top-N elitism."""
+        indexed = list(enumerate(pool.models))
+        indexed.sort(key=lambda x: x[1].fitness, reverse=True)
+        return [m.copy() for _, m in indexed[:n]]
+
+    @staticmethod
+    def select_diverse_elites(pool: ModelPool, n: int) -> List[NeuralNetwork]:
+        """
+        Select n elites that are both high-fitness AND diverse.
+        Uses greedy selection: pick best model, then iteratively pick
+        the model that maximizes (fitness + diversity_from_selected).
+        """
+        if not pool.models or n <= 0:
+            return []
+        if n >= len(pool.models):
+            return [m.copy() for m in pool.models]
+
+        indexed = list(enumerate(pool.models))
+        selected_indices = []
+        selected_models = []
+
+        # Pick the single best model first
+        best_idx = max(indexed, key=lambda x: x[1].fitness)[0]
+        selected_indices.append(best_idx)
+        selected_models.append(pool.models[best_idx].copy())
+
+        # Greedy selection for remaining spots
+        for _ in range(min(n - 1, len(pool.models) - 1)):
+            best_score = -1e9
+            best_candidate = None
+
+            for i, model in indexed:
+                if i in selected_indices:
+                    continue
+                # Score = fitness + diversity bonus
+                avg_dist = sum(
+                    model.similarity(sel)
+                    for sel in [pool.models[si] for si in selected_indices]
+                ) / len(selected_indices)
+                score = model.fitness + avg_dist * 20  # diversity weight
+                if score > best_score:
+                    best_score = score
+                    best_candidate = i
+
+            if best_candidate is not None:
+                selected_indices.append(best_candidate)
+                selected_models.append(pool.models[best_candidate].copy())
+
+        return selected_models
+
+    @staticmethod
+    def select_age_based(pool: ModelPool, n: int) -> List[NeuralNetwork]:
+        """Prefer models that have survived multiple generations (age = epoch_created)."""
+        current_epoch = pool.epoch
+        indexed = []
+        for i, m in enumerate(pool.models):
+            age = current_epoch - m.epoch_created
+            age_score = min(age, 20) / 20.0  # normalize to [0,1]
+            # Combined score: 70% fitness, 30% age
+            combined = m.fitness * 0.7 + age_score * max(10, m.fitness) * 0.3
+            indexed.append((i, combined))
+        indexed.sort(key=lambda x: -x[1])
+        return [pool.models[i].copy() for i, _ in indexed[:n]]
+
+    @staticmethod
+    def select_stochastic(pool: ModelPool, n: int) -> List[NeuralNetwork]:
+        """Probabilistic selection: better fitness = higher chance, but not guaranteed."""
+        if not pool.models or n <= 0:
+            return []
+        fits = [max(0.01, m.fitness) for m in pool.models]
+        total = sum(fits)
+        probs = [f / total for f in fits]
+        selected = set()
+        elites = []
+        attempts = 0
+        while len(elites) < n and attempts < n * 10:
+            idx = random.choices(range(len(pool.models)), weights=probs, k=1)[0]
+            if idx not in selected:
+                selected.add(idx)
+                elites.append(pool.models[idx].copy())
+            attempts += 1
+        # Fill remaining with top models if needed
+        while len(elites) < n:
+            for i in range(len(pool.models)):
+                if i not in selected and len(elites) < n:
+                    selected.add(i)
+                    elites.append(pool.models[i].copy())
+        return elites
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SECTION 55: POPULATION DIVERSITY ANALYZER
+# ═══════════════════════════════════════════════════════════════════
+# Advanced diversity metrics for monitoring population health.
+# Provides early warning for convergence and guides adaptive parameter tuning.
+
+class DiversityAnalyzer:
+    """
+    Comprehensive diversity analysis for model populations.
+    
+    Metrics:
+      - Weight space diversity: average pairwise weight distance
+      - Fitness diversity: spread of fitness values
+      - Behavioral diversity: variety of behavioral strategies
+      - Genotypic entropy: Shannon entropy of weight distributions
+      - Phenotypic clustering: number of distinct behavioral clusters
+      - Innovation rate: how many new behaviors appear per generation
+    """
+
+    def __init__(self, n_clusters: int = 5):
+        self.n_clusters = n_clusters
+        self.history: List[Dict] = []
+        self.last_behavioral_archive: List[List[float]] = []
+        self.characterizer = BehaviorCharacterizer(n_samples=20)
+
+    def analyze(self, pool: ModelPool) -> Dict:
+        """Run all diversity metrics on a pool."""
+        if not pool.models:
+            return {}
+
+        weight_div = self._weight_diversity(pool)
+        fitness_div = self._fitness_diversity(pool)
+        behavioral_div = self._behavioral_diversity(pool)
+        entropy = self._weight_entropy(pool)
+        n_clusters = self._estimate_clusters(pool)
+        innovation = self._innovation_rate(pool)
+
+        metrics = {
+            'team': pool.team,
+            'team_name': pool.team_name,
+            'epoch': pool.epoch,
+            'weight_diversity': round(weight_div, 4),
+            'fitness_diversity': round(fitness_div, 4),
+            'behavioral_diversity': round(behavioral_div, 4),
+            'weight_entropy': round(entropy, 4),
+            'estimated_clusters': n_clusters,
+            'innovation_rate': round(innovation, 4),
+            'n_models': len(pool.models),
+        }
+
+        self.history.append(metrics)
+        if len(self.history) > 500:
+            self.history = self.history[-500:]
+
+        return metrics
+
+    def _weight_diversity(self, pool: ModelPool) -> float:
+        """Average pairwise distance between weight vectors."""
+        if len(pool.models) < 2:
+            return 0.0
+        samples = random.sample(pool.models, min(15, len(pool.models)))
+        total = 0.0
+        pairs = 0
+        for i in range(len(samples)):
+            for j in range(i + 1, len(samples)):
+                total += samples[i].similarity(samples[j])
+                pairs += 1
+        return total / pairs if pairs > 0 else 0.0
+
+    def _fitness_diversity(self, pool: ModelPool) -> float:
+        """Coefficient of variation of fitness values."""
+        fits = [m.fitness for m in pool.models]
+        if not fits or sum(fits) == 0:
+            return 0.0
+        mean = sum(fits) / len(fits)
+        if mean == 0:
+            return 0.0
+        variance = sum((f - mean) ** 2 for f in fits) / len(fits)
+        return math.sqrt(variance) / mean
+
+    def _behavioral_diversity(self, pool: ModelPool) -> float:
+        """Average distance between behavior descriptors."""
+        if len(pool.models) < 2:
+            return 0.0
+        descriptors = [self.characterizer.characterize(m) for m in pool.models]
+        total = 0.0
+        pairs = 0
+        for i in range(len(descriptors)):
+            for j in range(i + 1, len(descriptors)):
+                dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(descriptors[i], descriptors[j])))
+                total += dist
+                pairs += 1
+        return total / pairs if pairs > 0 else 0.0
+
+    def _weight_entropy(self, pool: ModelPool) -> float:
+        """Shannon entropy of weight value distributions across all models."""
+        if not pool.models:
+            return 0.0
+        all_weights = []
+        for m in pool.models:
+            all_weights.extend(m.weights)
+
+        if not all_weights:
+            return 0.0
+
+        # Discretize into bins
+        n_bins = 20
+        min_w = min(all_weights)
+        max_w = max(all_weights)
+        if max_w - min_w < 1e-10:
+            return 0.0
+        bin_size = (max_w - min_w) / n_bins
+        bins = [0] * n_bins
+        for w in all_weights:
+            idx = min(n_bins - 1, int((w - min_w) / bin_size))
+            bins[idx] += 1
+
+        total = sum(bins) or 1
+        entropy = 0.0
+        for b in bins:
+            if b > 0:
+                p = b / total
+                entropy -= p * math.log2(p)
+
+        return entropy / math.log2(n_bins)  # normalize to [0, 1]
+
+    def _estimate_clusters(self, pool: ModelPool) -> int:
+        """Estimate number of behavioral clusters using simple threshold clustering."""
+        if len(pool.models) < 2:
+            return 1
+        descriptors = [self.characterizer.characterize(m) for m in pool.models]
+        clusters = []
+        for desc in descriptors:
+            found = False
+            for cluster in clusters:
+                dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(desc, cluster[0])))
+                if dist < 0.3:
+                    cluster.append(desc)
+                    found = True
+                    break
+            if not found:
+                clusters.append([desc])
+        return len(clusters)
+
+    def _innovation_rate(self, pool: ModelPool) -> float:
+        """Fraction of models with novel behaviors compared to archive."""
+        if not self.last_behavioral_archive:
+            descriptors = [self.characterizer.characterize(m) for m in pool.models]
+            self.last_behavioral_archive = descriptors
+            return 1.0
+
+        descriptors = [self.characterizer.characterize(m) for m in pool.models]
+        novel_count = 0
+        for desc in descriptors:
+            is_novel = True
+            for archived in self.last_behavioral_archive:
+                dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(desc, archived)))
+                if dist < 0.3:
+                    is_novel = False
+                    break
+            if is_novel:
+                novel_count += 1
+
+        self.last_behavioral_archive = descriptors
+        return novel_count / max(len(descriptors), 1)
+
+    def get_summary(self, team: int = 0) -> str:
+        """Get a formatted summary of recent diversity metrics."""
+        recent = [h for h in self.history if h.get('team') == team][-5:]
+        if not recent:
+            return 'No diversity data available.'
+        lines = [f'Diversity Summary for Team {team}:']
+        for m in recent:
+            lines.append(
+                f'  Ep {m["epoch"]:3d}: weight_div={m["weight_diversity"]:.3f} '
+                f'fit_div={m["fitness_diversity"]:.3f} '
+                f'behav_div={m["behavioral_diversity"]:.3f} '
+                f'clusters={m["estimated_clusters"]}'
+            )
+        return '\n'.join(lines)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SECTION 56: GENERATION HEALTH REPORT
+# ═══════════════════════════════════════════════════════════════════
+# Comprehensive health report for each generation, tracking:
+#   - Fitness stats (min, max, avg, median, std)
+#   - Diversity metrics (weight space, behavioral, genotypic)
+#   - Convergence warnings (stagnation, diversity collapse)
+#   - Improvement rate
+#   - Species count (if speciation enabled)
+#   - Model age distribution
+#   - Top model analysis
+
+class GenerationHealthReport:
+    """
+    Generate comprehensive health reports for the evolution process.
+    
+    Used both for display in the CLI and for export to JSON/HTML
+    for external analysis.
+    """
+
+    def __init__(self):
+        self.history: List[Dict] = []
+        self.diversity_analyzer = DiversityAnalyzer()
+
+    def analyze_generation(self, engine: EvolutionEngine) -> Dict:
+        """Analyze the current generation across all teams."""
+        report = {
+            'generation': engine.generation,
+            'timestamp': time.time(),
+            'teams': [],
+            'global': self._global_stats(engine),
+        }
+
+        for t in range(N_TEAMS):
+            pool = engine.weight_manager.get_pool(t)
+            if not pool:
+                continue
+
+            fits = [m.fitness for m in pool.models]
+            weights = [m.weights for m in pool.models]
+            ages = [pool.epoch - m.epoch_created for m in pool.models]
+
+            team_report = {
+                'team': t,
+                'name': pool.team_name,
+                'epoch': pool.epoch,
+                'fitness': {
+                    'min': round(min(fits), 2) if fits else 0,
+                    'max': round(max(fits), 2) if fits else 0,
+                    'avg': round(sum(fits) / len(fits), 2) if fits else 0,
+                    'median': round(statistics.median(fits), 2) if len(fits) > 1 else fits[0] if fits else 0,
+                    'std': round(statistics.stdev(fits), 2) if len(fits) > 1 else 0,
+                    'best_ever': round(pool.best_fitness_ever, 2),
+                },
+                'diversity': self.diversity_analyzer.analyze(pool),
+                'ages': {
+                    'min_age': min(ages),
+                    'max_age': max(ages),
+                    'avg_age': round(sum(ages) / len(ages), 1) if ages else 0,
+                },
+                'improvement_rate': round(
+                    PopulationHealthMetrics.compute_improvement_rate(pool.epoch_fitness_log), 3
+                ),
+                'stagnation': PopulationHealthMetrics.compute_stagnation(pool.epoch_fitness_log),
+                'convergence_risk': round(
+                    PopulationHealthMetrics.compute_convergence_risk(pool), 3
+                ),
+                'n_models': len(pool.models),
+                'n_alive_worms': sum(1 for w in []
+                                     if hasattr(w, 'team') and w.team == t and w.alive)
+                if False else 0,  # Simplified - we don't have worm list here
+            }
+
+            # Warnings
+            team_report['warnings'] = self._check_warnings(team_report)
+            report['teams'].append(team_report)
+
+        self.history.append(report)
+        if len(self.history) > 100:
+            self.history = self.history[-100:]
+
+        return report
+
+    def _global_stats(self, engine: EvolutionEngine) -> Dict:
+        """Compute global statistics across all teams."""
+        all_fits = []
+        total_epochs = 0
+        for t in range(N_TEAMS):
+            pool = engine.weight_manager.get_pool(t)
+            if pool:
+                all_fits.extend(m.fitness for m in pool.models)
+                total_epochs += pool.epoch
+
+        return {
+            'total_teams': N_TEAMS,
+            'total_models': N_TEAMS * MODELS_PER_TEAM,
+            'total_epochs': total_epochs,
+            'best_fitness_ever': round(engine.best_fitness_ever, 2),
+            'global_generation': engine.generation,
+            'total_births': engine.total_births,
+            'global_fitness_avg': round(sum(all_fits) / len(all_fits), 2) if all_fits else 0,
+            'global_fitness_max': round(max(all_fits), 2) if all_fits else 0,
+        }
+
+    def _check_warnings(self, team_report: Dict) -> List[str]:
+        """Check for warning conditions."""
+        warnings = []
+        fd = team_report.get('fitness', {})
+        div = team_report.get('diversity', {})
+
+        if fd.get('max', 0) < 10 and team_report.get('epoch', 0) > 5:
+            warnings.append('Low fitness after 5+ epochs')
+
+        if div.get('weight_diversity', 1) < 0.1:
+            warnings.append('Weight diversity critically low')
+
+        if div.get('estimated_clusters', 5) < 2:
+            warnings.append('Only 1 behavioral cluster — convergence imminent')
+
+        if team_report.get('stagnation', 0) > 15:
+            warnings.append(f"Stagnant for {team_report['stagnation']} generations")
+
+        if team_report.get('convergence_risk', 0) > 0.8:
+            warnings.append('High convergence risk — increase mutation')
+
+        return warnings
+
+    def format_report(self, report: Optional[Dict] = None) -> str:
+        """Format a health report as a human-readable string."""
+        if report is None:
+            report = self.history[-1] if self.history else None
+            if not report:
+                return 'No report data available.'
+
+        lines = []
+        lines.append(f'Generation {report["generation"]} Health Report')
+        lines.append('=' * 50)
+
+        g = report['global']
+        lines.append(f'Global: {g["total_models"]} models, '
+                     f'{g["total_epochs"]} total epochs')
+        lines.append(f'Best fitness ever: {g["best_fitness_ever"]}')
+        lines.append(f'Global avg fitness: {g["global_fitness_avg"]}')
+
+        for tr in report['teams']:
+            lines.append(f'\n{tr["name"]} (epoch {tr["epoch"]}):')
+            f = tr['fitness']
+            lines.append(f'  Fitness: max={f["max"]} avg={f["avg"]} '
+                         f'median={f["median"]} std={f["std"]}')
+            d = tr['diversity']
+            lines.append(f'  Diversity: weight={d.get("weight_diversity",0):.3f} '
+                         f'behavior={d.get("behavioral_diversity",0):.3f} '
+                         f'clusters={d.get("estimated_clusters",0)}')
+            lines.append(f'  Stagnation: {tr["stagnation"]} gen, '
+                         f'convergence risk: {tr["convergence_risk"]}')
+
+            if tr['warnings']:
+                for w in tr['warnings']:
+                    lines.append(f'  ⚠ {w}')
+
+        return '\n'.join(lines)
+
+    def export_json(self, path: str = 'health_report.json') -> None:
+        """Export the latest health report to a JSON file."""
+        if self.history:
+            try:
+                with open(path, 'w') as f:
+                    json.dump(self.history[-1], f, indent=2, default=str)
+            except IOError:
+                pass
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SECTION 57: GENERATION HEALTH MONITOR
+# ═══════════════════════════════════════════════════════════════════
+# Background monitor that tracks evolution progress and provides
+# real-time feedback through callbacks.
+
+class EvolutionMonitor:
+    """
+    Monitors evolution progress and triggers callbacks.
+    
+    Callbacks:
+      - on_generation_end: after each generation completes
+      - on_epoch_end: after a team's epoch advances
+      - on_stagnation: when a team stagnates for N generations
+      - on_milestone: when a fitness milestone is reached
+      - on_convergence: when convergence risk exceeds threshold
+    """
+
+    def __init__(self):
+        self.callbacks = {
+            'on_generation_end': [],
+            'on_epoch_end': [],
+            'on_stagnation': [],
+            'on_milestone': [],
+            'on_convergence': [],
+        }
+        self.reporter = GenerationHealthReport()
+        self.last_reported_gen = -1
+        self.milestones: Dict[int, float] = {}  # {team: milestone_fitness}
+
+    def register_callback(self, event: str, func: Callable) -> None:
+        if event in self.callbacks:
+            self.callbacks[event].append(func)
+
+    def on_generation_end(self, engine: EvolutionEngine) -> None:
+        """Called at the end of each generation."""
+        gen = engine.generation
+        if gen == self.last_reported_gen:
+            return
+        self.last_reported_gen = gen
+
+        report = self.reporter.analyze_generation(engine)
+
+        for cb in self.callbacks['on_generation_end']:
+            try:
+                cb(report)
+            except Exception:
+                pass
+
+        # Check milestones
+        for t in range(N_TEAMS):
+            pool = engine.weight_manager.get_pool(t)
+            if not pool:
+                continue
+            current_best = pool.get_best_fitness()
+            prev_milestone = self.milestones.get(t, 0)
+            if current_best >= prev_milestone + 100:
+                self.milestones[t] = current_best
+                for cb in self.callbacks['on_milestone']:
+                    try:
+                        cb(t, current_best)
+                    except Exception:
+                        pass
+
+        # Check stagnation
+        for tr in report.get('teams', []):
+            if tr.get('stagnation', 0) > 10:
+                for cb in self.callbacks['on_stagnation']:
+                    try:
+                        cb(tr['team'], tr['stagnation'])
+                    except Exception:
+                        pass
+
+            if tr.get('convergence_risk', 0) > 0.8:
+                for cb in self.callbacks['on_convergence']:
+                    try:
+                        cb(tr['team'], tr['convergence_risk'])
+                    except Exception:
+                        pass
+
+    def on_epoch_end(self, team: int, epoch: int, fitness: float) -> None:
+        for cb in self.callbacks['on_epoch_end']:
+            try:
+                cb(team, epoch, fitness)
+            except Exception:
+                pass
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SECTION 58: EVOLUTIONARY STRATEGY PRESETS
+# ═══════════════════════════════════════════════════════════════════
+# Pre-configured evolution strategies for different scenarios.
+# Each preset tunes the GA hyperparameters for a specific goal.
+
+class EvolutionStrategyPresets:
+    """
+    Pre-configured strategy presets for different evolution scenarios.
+    
+    Presets:
+      'balanced': default, good for general-purpose evolution
+      'exploration': high mutation, low crossover — for early stages
+      'exploitation': low mutation, high crossover — for fine-tuning
+      'diversity': speciation + novelty search enabled
+      'speed': simplified GA for fast convergence
+      'deep': long-term evolution with adaptive parameters
+    """
+
+    @staticmethod
+    def get_preset(name: str = 'balanced') -> Dict:
+        presets = {
+            'balanced': {
+                'mutation_rate': 0.08,
+                'mutation_amount': 0.5,
+                'crossover_rate': 0.6,
+                'crossover_method': 'uniform',
+                'elite_count': 3,
+                'tournament_size': 4,
+                'selection_method': 'tournament',
+                'mutation_method': 'uniform',
+                'random_fill': 2,
+                'description': 'Balanced general-purpose evolution',
+            },
+            'exploration': {
+                'mutation_rate': 0.15,
+                'mutation_amount': 0.9,
+                'crossover_rate': 0.4,
+                'crossover_method': 'blend',
+                'elite_count': 2,
+                'tournament_size': 3,
+                'selection_method': 'roulette',
+                'mutation_method': 'gaussian',
+                'random_fill': 3,
+                'description': 'High exploration, good for early generations',
+            },
+            'exploitation': {
+                'mutation_rate': 0.03,
+                'mutation_amount': 0.2,
+                'crossover_rate': 0.85,
+                'crossover_method': 'two_point',
+                'elite_count': 5,
+                'tournament_size': 5,
+                'selection_method': 'rank',
+                'mutation_method': 'uniform',
+                'random_fill': 1,
+                'description': 'Fine-tuning, low mutation, high crossover',
+            },
+            'diversity': {
+                'mutation_rate': 0.10,
+                'mutation_amount': 0.6,
+                'crossover_rate': 0.5,
+                'crossover_method': 'uniform',
+                'elite_count': 4,
+                'tournament_size': 4,
+                'selection_method': 'tournament',
+                'mutation_method': 'adaptive',
+                'random_fill': 2,
+                'description': 'Diversity-focused with adaptive mutation',
+                'use_speciation': True,
+                'use_novelty': True,
+            },
+            'speed': {
+                'mutation_rate': 0.12,
+                'mutation_amount': 0.7,
+                'crossover_rate': 0.3,
+                'crossover_method': 'average',
+                'elite_count': 2,
+                'tournament_size': 2,
+                'selection_method': 'tournament',
+                'mutation_method': 'uniform',
+                'random_fill': 1,
+                'description': 'Fast convergence for quick testing',
+            },
+            'deep': {
+                'mutation_rate': 0.06,
+                'mutation_amount': 0.4,
+                'crossover_rate': 0.7,
+                'crossover_method': 'sbx',
+                'elite_count': 3,
+                'tournament_size': 5,
+                'selection_method': 'tournament',
+                'mutation_method': 'polynomial',
+                'random_fill': 2,
+                'description': 'Long-term deep evolution with SBX crossover',
+                'use_adaptive_params': True,
+            },
+        }
+        return presets.get(name, presets['balanced'])
+
+    @staticmethod
+    def list_presets() -> str:
+        names = ['balanced', 'exploration', 'exploitation', 'diversity', 'speed', 'deep']
+        lines = ['Available presets:']
+        for n in names:
+            p = EvolutionStrategyPresets.get_preset(n)
+            lines.append(f'  {n:15s} — {p["description"]}')
+        return '\n'.join(lines)
+
+    @staticmethod
+    def apply_preset(evolver: TeamEvolver, preset_name: str) -> None:
+        """Apply a preset to a TeamEvolver instance."""
+        preset = EvolutionStrategyPresets.get_preset(preset_name)
+        for key, value in preset.items():
+            if hasattr(evolver, key) and key != 'description':
+                setattr(evolver, key, value)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# SECTION 59: MODEL COMPARISON & MATCHUP SIMULATOR
+# ═══════════════════════════════════════════════════════════════════
+# Simulates head-to-head matchups between models to determine
+# which one performs better in direct competition.
+
+class MatchupSimulator:
+    """
+    Simulates direct competition between two neural network models.
+    
+    Runs a mini-simulation where two worms controlled by the given
+    models compete for food in a small arena. Returns scores for
+    food collected, survival time, and (if applicable) kills.
+    
+    This is useful for:
+      - Tournament selection between candidate models
+      - Building Elo ratings
+      - Testing specific behavioral traits
+    """
+
+    def __init__(self, arena_size: int = 1000,
+                 n_food: int = 20,
+                 simulation_ticks: int = 600):
+        self.arena_size = arena_size
+        self.n_food = n_food
+        self.simulation_ticks = simulation_ticks
+        self.characterizer = BehaviorCharacterizer(10)
+
+    def simulate_matchup(self, model_a: NeuralNetwork,
+                          model_b: NeuralNetwork) -> Dict:
+        """
+        Simulate a head-to-head matchup between two models.
+        
+        Simplified simulation (not full physics, just behavior comparison):
+          1. Generate behavior descriptors for both models
+          2. Score food-seeking tendency, aggression, and wall avoidance
+          3. Combine into a composite score
+        """
+        desc_a = self.characterizer.characterize(model_a)
+        desc_b = self.characterizer.characterize(model_b)
+
+        # Food seeking: higher = better at finding food
+        food_a = desc_a[2] if len(desc_a) > 2 else 0.5
+        food_b = desc_b[2] if len(desc_b) > 2 else 0.5
+
+        # Wall avoidance: higher = better at avoiding walls
+        wall_a = 1.0 - min(desc_a[3], 1.0) if len(desc_a) > 3 else 0.5
+        wall_b = 1.0 - min(desc_b[3], 1.0) if len(desc_b) > 3 else 0.5
+
+        # Aggression (enemy response): higher = more aggressive
+        aggr_a = abs(desc_a[4]) if len(desc_a) > 4 else 0.5
+        aggr_b = abs(desc_b[4]) if len(desc_b) > 4 else 0.5
+
+        # Composite scores
+        score_a = food_a * 2.0 + wall_a * 1.0 + aggr_a * 0.5
+        score_b = food_b * 2.0 + wall_b * 1.0 + aggr_b * 0.5
+
+        # Winner determination with some noise
+        noise_a = random.gauss(0, 0.2)
+        noise_b = random.gauss(0, 0.2)
+        final_a = score_a + noise_a
+        final_b = score_b + noise_b
+
+        return {
+            'model_a_score': round(final_a, 3),
+            'model_b_score': round(final_b, 3),
+            'winner': 'A' if final_a > final_b else 'B',
+            'margin': round(abs(final_a - final_b), 3),
+            'descriptors': {
+                'A': [round(d, 3) for d in desc_a],
+                'B': [round(d, 3) for d in desc_b],
+            },
+            'food_seeking': {'A': round(food_a, 3), 'B': round(food_b, 3)},
+            'wall_avoidance': {'A': round(wall_a, 3), 'B': round(wall_b, 3)},
+            'aggression': {'A': round(aggr_a, 3), 'B': round(aggr_b, 3)},
+        }
+
+    def full_tournament(self, models: List[NeuralNetwork]) -> List[Tuple[int, float]]:
+        """Run a full round-robin tournament. Returns (index, score) for each model."""
+        n = len(models)
+        scores = [0.0] * n
+        for i in range(n):
+            for j in range(i + 1, n):
+                result = self.simulate_matchup(models[i], models[j])
+                if result['winner'] == 'A':
+                    scores[i] += 1.0 + result['margin']
+                else:
+                    scores[j] += 1.0 + result['margin']
+        indexed = list(enumerate(scores))
+        indexed.sort(key=lambda x: -x[1])
+        return indexed
+
+
+# ═══════════════════════════════════════════════════════════════════
+# MAIN
 # ═══════════════════════════════════════════════════════════════════
 
 class PerformanceBenchmark:
